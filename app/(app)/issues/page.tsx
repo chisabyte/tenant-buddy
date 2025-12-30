@@ -460,21 +460,41 @@ export default function IssuesPage() {
   );
 }
 
-function getSeverity(issue: { status: string }): "Urgent" | "Critical" | "Routine" {
+function getSeverity(issue: { status: string; created_at: string }): "Urgent" | "High" | "Medium" | "Low" {
   const status = issue.status;
-  if (status === "in_progress") return "Urgent";
-  if (status === "open") return "Critical";
-  if (status === "resolved" || status === "closed") return "Routine";
-  return "Routine";
+
+  // Resolved/closed issues are always Low priority
+  if (status === "resolved" || status === "closed") {
+    return "Low";
+  }
+
+  // For open/in_progress issues, calculate based on age
+  const createdDate = new Date(issue.created_at);
+  const now = new Date();
+  const daysOld = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  // Issues waiting on agent response for a while become more urgent
+  if (status === "in_progress") {
+    if (daysOld > 14) return "Urgent";
+    if (daysOld > 7) return "High";
+    return "Medium";
+  }
+
+  // Open issues - severity increases with age
+  if (daysOld > 30) return "Urgent";
+  if (daysOld > 14) return "High";
+  if (daysOld > 7) return "Medium";
+  return "Low";
 }
 
 function getSeverityClasses(severity: string): string {
   const classes: Record<string, string> = {
     Urgent: "bg-red-500/20 text-red-400",
-    Critical: "bg-orange-500/20 text-orange-400",
-    Routine: "bg-slate-700 text-slate-300",
+    High: "bg-orange-500/20 text-orange-400",
+    Medium: "bg-amber-500/20 text-amber-400",
+    Low: "bg-slate-700 text-slate-300",
   };
-  return classes[severity] || classes.Routine;
+  return classes[severity] || classes.Low;
 }
 
 function getStatusClasses(status: IssueStatus): string {

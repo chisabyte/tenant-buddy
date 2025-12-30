@@ -203,8 +203,11 @@ export default function PricingPage() {
         throw new Error("No checkout URL received");
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred. Please try again.");
+      const errorMessage = err.message || "An error occurred. Please try again.";
+      setError(errorMessage);
       setLoading(null);
+      // Scroll to top to show error
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -286,6 +289,17 @@ export default function PricingPage() {
             </div>
           </div>
         </section>
+
+        {/* Error Message */}
+        {error && (
+          <section className="pb-4">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-red-400 text-sm text-center">
+                {error}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Pricing Cards */}
         <section className="pb-16 lg:pb-24">
@@ -415,15 +429,6 @@ export default function PricingPage() {
             </div>
           </div>
         </section>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-red-400 text-sm">
-              {error}
-            </div>
-          </div>
-        )}
 
         {/* Feature Comparison Table */}
         <section className="py-16 lg:py-24 bg-card">
