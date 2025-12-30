@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Evidence Vault - RentersVault</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13b6ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#111e22",
+                        "surface-dark": "#1a2c32",
+                        "surface-border": "#233f48",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-surface-border bg-white dark:bg-background-dark px-10 py-3">
+<div class="flex items-center gap-4">
+<div class="size-8 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M44 11.2727C44 14.0109 39.8386 16.3957 33.69 17.6364C39.8386 18.877 44 21.2618 44 24C44 26.7382 39.8386 29.123 33.69 30.3636C39.8386 31.6043 44 33.9891 44 36.7273C44 40.7439 35.0457 44 24 44C12.9543 44 4 40.7439 4 36.7273C4 33.9891 8.16144 31.6043 14.31 30.3636C8.16144 29.123 4 26.7382 4 24C4 21.2618 8.16144 18.877 14.31 17.6364C8.16144 16.3957 4 14.0109 4 11.2727C4 7.25611 12.9543 4 24 4C35.0457 4 44 7.25611 44 11.2727Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">RentersVault</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="hidden md:flex items-center gap-9">
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-medium leading-normal" href="#">Evidence Vault</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">Issues Log</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">Settings</a>
+</nav>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-slate-200 dark:border-surface-border" data-alt="User profile picture placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDfo0RguaZDwFAuJHWWvDnqSgVrZsRTKSmdRy-x4zfQyI2laPULfQ5tI5rrRiCTm3wVj_dJ3_GkVEMK-4nU43vzulQlPSpRwLDMMBA3xP8AQHNUnUwxaij8d5-0webxSsymTtWNOp5BuGjQrYTaleNNzUCGZDSwohA8brHeM_IAjrdLvMdaXaYs4LapxMTk1Lms3-nT-pNPEWHHghl9K0y9Q21la5FDoOBprE5H_dLPyqFPmQOU-oOR9Tzg7zongTB3UGe2rhot2YY");'></div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex justify-center py-8 px-4 md:px-10 lg:px-20">
+<div class="flex flex-col max-w-[1200px] flex-1 gap-6">
+<!-- Page Heading & Actions -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-slate-200 dark:border-surface-border">
+<div class="flex flex-col gap-2">
+<h1 class="text-slate-900 dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">My Evidence Vault</h1>
+<p class="text-slate-500 dark:text-[#92bbc9] text-base font-normal leading-normal max-w-xl">
+                        Securely store and organize your tenancy documents. All files are encrypted with bank-level security.
+                    </p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-slate-200 dark:bg-surface-border hover:bg-slate-300 dark:hover:bg-opacity-80 text-slate-900 dark:text-white text-sm font-bold transition-colors">
+<span class="material-symbols-outlined text-lg">folder_zip</span>
+<span class="hidden sm:inline">Generate Pack</span>
+</button>
+<button class="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary hover:bg-opacity-90 text-background-dark text-sm font-bold transition-colors shadow-[0_0_15px_rgba(19,182,236,0.3)]">
+<span class="material-symbols-outlined text-lg">upload_file</span>
+<span>Upload Evidence</span>
+</button>
+</div>
+</div>
+<!-- Stats Overview -->
+<section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border shadow-sm">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-[#92bbc9] text-sm font-medium">Total Files</p>
+<span class="material-symbols-outlined text-primary">folder_open</span>
+</div>
+<p class="text-slate-900 dark:text-white text-2xl font-bold">24</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border shadow-sm">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-[#92bbc9] text-sm font-medium">Last Upload</p>
+<span class="material-symbols-outlined text-primary">history</span>
+</div>
+<p class="text-slate-900 dark:text-white text-2xl font-bold">Oct 12, 2023</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border shadow-sm relative overflow-hidden group">
+<div class="absolute right-0 top-0 h-full w-1 bg-primary opacity-50"></div>
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-[#92bbc9] text-sm font-medium">Storage Used</p>
+<span class="material-symbols-outlined text-primary">cloud</span>
+</div>
+<div class="flex items-end gap-2">
+<p class="text-slate-900 dark:text-white text-2xl font-bold">120 MB</p>
+<p class="text-slate-400 text-sm mb-1">/ 1 GB</p>
+</div>
+<div class="w-full bg-slate-200 dark:bg-surface-border h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 12%"></div>
+</div>
+</div>
+</section>
+<!-- Filters & Search -->
+<section class="flex flex-col lg:flex-row gap-4 lg:items-center justify-between bg-white dark:bg-surface-dark p-4 rounded-xl border border-slate-200 dark:border-surface-border shadow-sm">
+<!-- Search -->
+<div class="relative flex-1 max-w-lg group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 dark:text-[#92bbc9]">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2.5 border-none rounded-lg leading-5 bg-slate-100 dark:bg-background-dark text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-[#92bbc9] focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm" placeholder="Search files by name, tag, or description..." type="text"/>
+</div>
+<!-- Filters -->
+<div class="flex flex-wrap items-center gap-3">
+<div class="flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-background-dark rounded-lg border border-transparent dark:border-surface-border">
+<span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Type:</span>
+<select class="bg-transparent border-none text-sm text-slate-700 dark:text-white focus:ring-0 cursor-pointer py-1 pl-0 pr-6">
+<option>All Types</option>
+<option>Photos</option>
+<option>Documents</option>
+<option>Emails</option>
+</select>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-background-dark rounded-lg border border-transparent dark:border-surface-border">
+<span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sort:</span>
+<select class="bg-transparent border-none text-sm text-slate-700 dark:text-white focus:ring-0 cursor-pointer py-1 pl-0 pr-6">
+<option>Date (Newest)</option>
+<option>Date (Oldest)</option>
+<option>Name (A-Z)</option>
+</select>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors" title="Grid View">
+<span class="material-symbols-outlined">grid_view</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors" title="List View">
+<span class="material-symbols-outlined">list</span>
+</button>
+</div>
+</section>
+<!-- Evidence Grid -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<!-- Card 1 -->
+<div class="group flex flex-col bg-white dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-surface-border hover:border-primary dark:hover:border-primary transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-primary/10">
+<div class="relative h-40 bg-slate-200 dark:bg-black/40 overflow-hidden">
+<div class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-white flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">image</span> Photo
+                        </div>
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Close up of a crack in a white painted wall" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtZ7DkrVBMoETTvcr3PLia3bDmAT-CtS-h_hMhb-ZP9sJXPKyuzX3umZsDXDmNtZ4ua1g36dx3mtjWlDp2yWlPRUmuOEapFq_DrmyqeyV_uCksLIbNwLdcVgZTauXeYb6kVMeC8vnNhruHcev2FvoaBPmQDYxyfdueTOkahUsExIFr4F4hl8q9rppA4SllqgcJciY-Uj2bsnx0P2tCz8-DtL5VRvcNrrYLijooyj-ZI8IbFhCHOd1cQ-YWHUKH63r85GbVPP6urNY"/>
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+<button class="bg-white/90 text-slate-900 rounded-full p-2 hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1 gap-2">
+<div class="flex justify-between items-start">
+<h3 class="text-slate-900 dark:text-white font-semibold text-sm line-clamp-1" title="Bedroom Wall Crack.jpg">Bedroom Wall Crack.jpg</h3>
+<button class="text-slate-400 hover:text-white">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+<div class="mt-auto flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+<span>Oct 12, 2023</span>
+<span class="bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">Damage</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group flex flex-col bg-white dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-surface-border hover:border-primary dark:hover:border-primary transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-primary/10">
+<div class="relative h-40 bg-slate-100 dark:bg-[#1a2c32] flex items-center justify-center">
+<div class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-white flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">description</span> Doc
+                        </div>
+<span class="material-symbols-outlined text-6xl text-slate-300 dark:text-surface-border">picture_as_pdf</span>
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+<button class="bg-white/90 text-slate-900 rounded-full p-2 hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1 gap-2">
+<div class="flex justify-between items-start">
+<h3 class="text-slate-900 dark:text-white font-semibold text-sm line-clamp-1" title="Lease Agreement 2023.pdf">Lease Agreement 2023.pdf</h3>
+<button class="text-slate-400 hover:text-white">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+<div class="mt-auto flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+<span>Jan 10, 2023</span>
+<span class="bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20">Contract</span>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group flex flex-col bg-white dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-surface-border hover:border-primary dark:hover:border-primary transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-primary/10">
+<div class="relative h-40 bg-slate-100 dark:bg-[#1a2c32] flex items-center justify-center">
+<div class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-white flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">mail</span> Email
+                        </div>
+<span class="material-symbols-outlined text-6xl text-slate-300 dark:text-surface-border">mark_email_read</span>
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+<button class="bg-white/90 text-slate-900 rounded-full p-2 hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1 gap-2">
+<div class="flex justify-between items-start">
+<h3 class="text-slate-900 dark:text-white font-semibold text-sm line-clamp-1" title="Email re: Mold Issue">Email re: Mold Issue</h3>
+<button class="text-slate-400 hover:text-white">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+<div class="mt-auto flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+<span>Nov 05, 2023</span>
+<span class="bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20">Correspondence</span>
+</div>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="group flex flex-col bg-white dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-surface-border hover:border-primary dark:hover:border-primary transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-primary/10">
+<div class="relative h-40 bg-slate-200 dark:bg-black/40 overflow-hidden">
+<div class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-white flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">image</span> Photo
+                        </div>
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Modern kitchen sink with water faucet" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDgMK3xnZO2lncNMwA4YoHCKViGrdMGb-IZdA6Vsj8vJnB9Y77MghXTMy9itMeIhIgYDYyZgxt7JajMbpALl4T8fSdgmc2U8k6h4syr968_lUqDJA-oJ48tej-VYSJf2hZb9xwr1PCwTseWN3ETmxKFZkOxn6XP_bUcG2oUDaN0b1kZJcj1nq-theFpUH9JzGQa7dz5KhYS9Tq5ZEDpYYiibK-ifTN84m8Eff-pD8QbbA1yo-YHIk0WDKfxp2u37gNBtJ2px0aYxE"/>
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+<button class="bg-white/90 text-slate-900 rounded-full p-2 hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1 gap-2">
+<div class="flex justify-between items-start">
+<h3 class="text-slate-900 dark:text-white font-semibold text-sm line-clamp-1" title="Kitchen Sink Before.jpg">Kitchen Sink Before.jpg</h3>
+<button class="text-slate-400 hover:text-white">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+<div class="mt-auto flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+<span>Sep 01, 2023</span>
+<span class="bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">Entry Report</span>
+</div>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="group flex flex-col bg-white dark:bg-surface-dark rounded-xl overflow-hidden border border-slate-200 dark:border-surface-border hover:border-primary dark:hover:border-primary transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-primary/10">
+<div class="relative h-40 bg-slate-200 dark:bg-black/40 overflow-hidden">
+<div class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-white flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">image</span> Photo
+                        </div>
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Clean garden with green grass" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMSXLcvO3RLsGKL6lpJ9ui6lRuHxgh5d15iaIyMUD3ktv44w0bdRsGkH7CVhF0EMVVqaauz1v9qeNCEY8B9mrTc5GvW224Qanhapuf7IgMgejXoKAAm4zQQc0JO6BK8aYx3ohkNvJ5WoxTMk30K34SSvR27E6XeCofTN_H9Rbr2MIjGC-myeKO5FWBvLL_eV1KsdFA5RWyY32OzjHOg8E_ozZn6LQ4HpFbOt9YU0cKdAmMKUVa9UYmkm_r9Nu4CFqmSpjQKcs0PZM"/>
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+<button class="bg-white/90 text-slate-900 rounded-full p-2 hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1 gap-2">
+<div class="flex justify-between items-start">
+<h3 class="text-slate-900 dark:text-white font-semibold text-sm line-clamp-1" title="Garden Condition.jpg">Garden Condition.jpg</h3>
+<button class="text-slate-400 hover:text-white">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+<div class="mt-auto flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+<span>Sep 01, 2023</span>
+<span class="bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">Entry Report</span>
+</div>
+</div>
+</div>
+<!-- Dropzone Placeholder (Upload Area) -->
+<div class="group flex flex-col justify-center items-center bg-slate-50 dark:bg-transparent rounded-xl border-2 border-dashed border-slate-300 dark:border-surface-border hover:border-primary dark:hover:border-primary hover:bg-primary/5 transition-all duration-300 cursor-pointer min-h-[260px]">
+<div class="flex flex-col items-center gap-4 text-center p-6">
+<div class="w-16 h-16 rounded-full bg-slate-200 dark:bg-surface-border flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl text-slate-500 dark:text-[#92bbc9] group-hover:text-primary">add</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="text-slate-900 dark:text-white font-bold text-lg">Upload New</h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Drag files here or click</p>
+</div>
+<span class="flex items-center gap-1 text-[10px] text-primary bg-primary/10 px-2 py-1 rounded-full mt-2">
+<span class="material-symbols-outlined text-[12px]">lock</span> Encrypted
+                        </span>
+</div>
+</div>
+</section>
+<!-- Pagination / Footer of Grid -->
+<div class="flex items-center justify-between pt-4">
+<p class="text-sm text-slate-500 dark:text-slate-400">Showing 1-5 of 24 items</p>
+<div class="flex gap-2">
+<button class="px-3 py-1 text-sm rounded border border-slate-300 dark:border-surface-border text-slate-500 dark:text-slate-400 opacity-50 cursor-not-allowed">Previous</button>
+<button class="px-3 py-1 text-sm rounded border border-slate-300 dark:border-surface-border text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-surface-dark transition-colors">Next</button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

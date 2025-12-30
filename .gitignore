@@ -1,0 +1,84 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+.pnpm-store/
+
+# Testing
+/coverage
+/test-results/
+/playwright-report/
+/playwright/.cache/
+.nyc_output/
+
+# Next.js
+/.next/
+/out/
+/build
+/dist
+
+# Environment files - NEVER COMMIT THESE
+# Contains secrets like API keys and database credentials
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+*.env
+
+# Misc
+.DS_Store
+*.pem
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-*
+
+# Supabase local development
+supabase/.branches/
+supabase/.temp/
+
+# Sentry
+.sentryclirc
+
+# Build artifacts
+*.tgz
+*.tar.gz
+*.zip
+
+# Cache
+.cache/
+.turbo/
+
+# Credentials (additional safety)
+**/credentials.json
+**/service-account.json
+**/*.key
+**/*.pem
+!*.example.pem
+

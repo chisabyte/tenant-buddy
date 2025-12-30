@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Issue Tracking - RentRescue</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13b6ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101d22",
+                        "surface-dark": "#1c2b30",
+                        "surface-highlight": "#233f48"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for dark mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #101d22;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233f48;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #325a67;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased overflow-hidden">
+<div class="flex h-screen w-full flex-col overflow-hidden">
+<!-- Top Navigation -->
+<header class="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 dark:border-[#233f48] bg-white dark:bg-[#111e22] px-6">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-slate-900 dark:text-white">
+<div class="flex size-8 items-center justify-center rounded-lg bg-primary/20 text-primary">
+<span class="material-symbols-outlined">home_work</span>
+</div>
+<h2 class="text-lg font-bold tracking-tight">RentRescue</h2>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<div class="hidden md:flex relative w-full max-w-md">
+<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="block w-full rounded-lg border-0 bg-slate-100 dark:bg-[#233f48] py-2 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-500 focus:ring-2 focus:ring-primary" placeholder="Search issues, evidence, or notes..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative rounded-full p-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1 right-1 size-2 rounded-full bg-red-500"></span>
+</button>
+<div class="size-9 rounded-full bg-cover bg-center border border-slate-200 dark:border-slate-700" data-alt="User profile picture showing a smiling person" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCmXVcM846MMQ7op2gDlSDWBP4bPA1dwtsz2ApLPbK9hd-BjMsojw0424wOZgWWQHiFMiOn_TCLG5lKZ3lNEfxf0S2ogc7ZP8TFyRfIyJfa4E3MbbdB0-abOvMoXxBJZcoPh7FgleLgEe44_L1ticxUmFQxTPmoULNalXVwcUGDub1hhtz5k0P0LP6R47fdysOY8NnezU8QG4zyI8Vf6DCAM9AT_J_Lobl8o1oMlNi2-Bnlmeqylso1lSmi9O7jLiM8x5ty72edpaA");'></div>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Sidebar -->
+<aside class="hidden w-64 flex-col border-r border-gray-200 dark:border-[#233f48] bg-white dark:bg-[#111e22] md:flex">
+<div class="flex flex-col gap-2 p-4">
+<div class="mb-6 flex items-center gap-3 rounded-xl bg-slate-100 dark:bg-[#1c2b30] p-3">
+<div class="size-10 rounded-full bg-cover bg-center" data-alt="Apartment building exterior view" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuASxYDy5Oz0ojo0ajg6tu3G5NP_yKMLvWQz98dkQnS5YdLe7YXD_iz34ASpwN2hpiNdsz7M0J5kg2v6vL49wlubEnAkfr36n_8RhS65JL10nSrQRMOTjSaWCwW5O_asUJO9lVTNLNJmtIKNkPt8yLmKcOLoOLZI7gVw1Y-ccsJcWqgMJmDWQ_1jRKtQCJo_GA6EA7rjMcRtGdZs-qmzYz02nDY3R-Nns50TED-jY8ukYJKgildppQ-Qc-z4_udnATWfIYtiN8V-Kk4");'></div>
+<div class="flex flex-col overflow-hidden">
+<h3 class="truncate text-sm font-semibold text-slate-900 dark:text-white">Unit 402</h3>
+<p class="truncate text-xs text-slate-500 dark:text-[#92bbc9]">12 Sydney Road</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-[#233f48]" href="#">
+<span class="material-symbols-outlined text-[22px]">dashboard</span>
+                            Dashboard
+                        </a>
+<a class="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary dark:bg-primary/20" href="#">
+<span class="material-symbols-outlined text-[22px] fill-1">assignment_late</span>
+                            Issue Tracker
+                        </a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-[#233f48]" href="#">
+<span class="material-symbols-outlined text-[22px]">folder_open</span>
+                            Evidence Locker
+                        </a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-[#233f48]" href="#">
+<span class="material-symbols-outlined text-[22px]">description</span>
+                            Reports
+                        </a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-[#233f48]" href="#">
+<span class="material-symbols-outlined text-[22px]">settings</span>
+                            Settings
+                        </a>
+</nav>
+</div>
+<div class="mt-auto p-4">
+<div class="rounded-xl bg-gradient-to-br from-[#1c2b30] to-[#101d22] p-4 border border-[#233f48]">
+<h4 class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Next Inspection</h4>
+<div class="flex items-center gap-2 text-white mb-3">
+<span class="material-symbols-outlined text-primary">calendar_month</span>
+<span class="font-medium">Nov 14, 2023</span>
+</div>
+<button class="w-full rounded-lg bg-[#233f48] py-2 text-xs font-medium text-white hover:bg-[#325a67]">View Checklist</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex flex-1 flex-col overflow-y-auto bg-slate-50 dark:bg-[#101d22] p-4 md:p-8">
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+<!-- Page Header -->
+<div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+<div class="flex gap-4">
+<div class="hidden md:flex h-14 w-14 items-center justify-center rounded-xl bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-[32px]">assignment</span>
+</div>
+<div class="flex flex-col justify-center">
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">Issue Tracking</h1>
+<p class="text-sm text-slate-500 dark:text-[#92bbc9]">Log maintenance requests and disputes for your evidence pack.</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="hidden md:flex items-center gap-2 rounded-lg border border-slate-200 dark:border-[#233f48] px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#233f48]">
+<span class="material-symbols-outlined text-[20px]">file_upload</span>
+                                Export Log
+                            </button>
+<button class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                                Log New Issue
+                            </button>
+</div>
+</div>
+<!-- Stats Cards (Contextual) -->
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 dark:border-[#233f48] dark:bg-[#1c2b30]">
+<span class="text-xs font-medium text-slate-500 dark:text-[#92bbc9]">Open Issues</span>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-slate-900 dark:text-white">3</span>
+<span class="flex items-center text-xs font-medium text-amber-500">
+<span class="material-symbols-outlined text-[14px] mr-0.5">warning</span> Action Req
+                                </span>
+</div>
+</div>
+<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 dark:border-[#233f48] dark:bg-[#1c2b30]">
+<span class="text-xs font-medium text-slate-500 dark:text-[#92bbc9]">Pending Agent</span>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-slate-900 dark:text-white">1</span>
+<span class="text-xs text-slate-400">Since Oct 12</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 dark:border-[#233f48] dark:bg-[#1c2b30]">
+<span class="text-xs font-medium text-slate-500 dark:text-[#92bbc9]">Resolved this year</span>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-slate-900 dark:text-white">12</span>
+<span class="flex items-center text-xs font-medium text-emerald-500">
+<span class="material-symbols-outlined text-[14px] mr-0.5">trending_up</span> +2 last month
+                                </span>
+</div>
+</div>
+<div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 dark:border-[#233f48] dark:bg-[#1c2b30]">
+<span class="text-xs font-medium text-slate-500 dark:text-[#92bbc9]">Evidence Files</span>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-slate-900 dark:text-white">45</span>
+<span class="text-xs text-slate-400">Total attached</span>
+</div>
+</div>
+</div>
+<!-- Filters -->
+<div class="flex flex-wrap items-center gap-3 py-2">
+<button class="group flex items-center gap-2 rounded-lg bg-slate-200 dark:bg-[#233f48] px-3 py-1.5 text-sm font-medium text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-[#325a67]">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                            All Issues
+                            <span class="material-symbols-outlined text-[18px] text-slate-500 dark:text-[#92bbc9] group-hover:text-slate-700 dark:group-hover:text-white">expand_more</span>
+</button>
+<button class="flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-[#92bbc9] hover:bg-slate-200 dark:hover:bg-[#233f48] hover:text-slate-900 dark:hover:text-white transition-colors">
+<span class="size-2 rounded-full bg-emerald-500"></span>
+                            Open
+                        </button>
+<button class="flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-[#92bbc9] hover:bg-slate-200 dark:hover:bg-[#233f48] hover:text-slate-900 dark:hover:text-white transition-colors">
+<span class="size-2 rounded-full bg-amber-500"></span>
+                            Pending
+                        </button>
+<button class="flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-[#92bbc9] hover:bg-slate-200 dark:hover:bg-[#233f48] hover:text-slate-900 dark:hover:text-white transition-colors">
+<span class="size-2 rounded-full bg-slate-400"></span>
+                            Resolved
+                        </button>
+<div class="ml-auto flex items-center gap-2">
+<div class="relative hidden sm:block">
+<span class="absolute inset-y-0 left-0 flex items-center pl-2 text-slate-500 dark:text-[#92bbc9]">
+<span class="material-symbols-outlined text-[18px]">sort</span>
+</span>
+<select class="h-9 rounded-lg border-0 bg-transparent py-0 pl-8 pr-8 text-sm font-medium text-slate-700 dark:text-white focus:ring-0 cursor-pointer hover:bg-slate-200 dark:hover:bg-[#233f48]">
+<option>Sort by Date</option>
+<option>Sort by Severity</option>
+<option>Sort by Status</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Main Table -->
+<div class="overflow-hidden rounded-xl border border-slate-200 dark:border-[#233f48] bg-white dark:bg-[#1c2b30] shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm">
+<thead class="border-b border-slate-200 dark:border-[#233f48] bg-slate-50 dark:bg-[#111e22]">
+<tr>
+<th class="px-6 py-4 font-medium text-slate-900 dark:text-white" scope="col">Issue Title</th>
+<th class="px-6 py-4 font-medium text-slate-900 dark:text-white" scope="col">Date Logged</th>
+<th class="px-6 py-4 font-medium text-slate-900 dark:text-white" scope="col">Severity</th>
+<th class="px-6 py-4 font-medium text-slate-900 dark:text-white" scope="col">Evidence</th>
+<th class="px-6 py-4 font-medium text-slate-900 dark:text-white" scope="col">Status</th>
+<th class="px-6 py-4 font-medium text-slate-900 dark:text-white text-right" scope="col">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 dark:divide-[#233f48]">
+<!-- Row 1 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-[#233f48]/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-semibold text-slate-900 dark:text-white">Mold in Bedroom Ceiling</span>
+<span class="text-xs text-slate-500 dark:text-[#92bbc9]">Reference #4492</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-[#92bbc9]">Oct 12, 2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-500/20 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
+                                                Urgent
+                                            </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-slate-600 dark:text-[#92bbc9]">
+<span class="material-symbols-outlined text-[18px]">attach_file</span>
+                                                4 Files
+                                            </div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-md bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-600/20 dark:ring-emerald-500/20">
+<span class="mr-1.5 size-1.5 rounded-full bg-emerald-500"></span>
+                                                Open
+                                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-[#325a67] dark:hover:text-white">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-[#233f48]/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-semibold text-slate-900 dark:text-white">Broken Oven Seal</span>
+<span class="text-xs text-slate-500 dark:text-[#92bbc9]">Reference #4451</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-[#92bbc9]">Oct 05, 2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                Routine
+                                            </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-slate-600 dark:text-[#92bbc9]">
+<span class="material-symbols-outlined text-[18px]">attach_file</span>
+                                                1 File
+                                            </div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20 dark:ring-amber-500/20">
+<span class="mr-1.5 size-1.5 rounded-full bg-amber-500"></span>
+                                                Pending Agent
+                                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-[#325a67] dark:hover:text-white">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-[#233f48]/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-semibold text-slate-900 dark:text-white">Bond Refund Dispute</span>
+<span class="text-xs text-slate-500 dark:text-[#92bbc9]">Reference #4021</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-[#92bbc9]">Sep 20, 2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-full bg-orange-100 dark:bg-orange-500/20 px-2.5 py-0.5 text-xs font-medium text-orange-700 dark:text-orange-400">
+                                                Critical
+                                            </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-slate-600 dark:text-[#92bbc9]">
+<span class="material-symbols-outlined text-[18px]">attach_file</span>
+                                                12 Files
+                                            </div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-md bg-slate-50 dark:bg-[#233f48] px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 ring-1 ring-inset ring-slate-500/10 dark:ring-slate-500/20">
+<span class="mr-1.5 size-1.5 rounded-full bg-slate-400"></span>
+                                                Resolved
+                                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-[#325a67] dark:hover:text-white">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-slate-50 dark:hover:bg-[#233f48]/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-semibold text-slate-900 dark:text-white">Leaking Bathroom Tap</span>
+<span class="text-xs text-slate-500 dark:text-[#92bbc9]">Reference #3922</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-600 dark:text-[#92bbc9]">Aug 14, 2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                Routine
+                                            </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-slate-600 dark:text-[#92bbc9]">
+<span class="material-symbols-outlined text-[18px]">attach_file</span>
+                                                2 Files
+                                            </div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-md bg-slate-50 dark:bg-[#233f48] px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 ring-1 ring-inset ring-slate-500/10 dark:ring-slate-500/20">
+<span class="mr-1.5 size-1.5 rounded-full bg-slate-400"></span>
+                                                Resolved
+                                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-[#325a67] dark:hover:text-white">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-between border-t border-slate-200 dark:border-[#233f48] bg-slate-50 dark:bg-[#111e22] px-6 py-3">
+<div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+<div>
+<p class="text-sm text-slate-700 dark:text-[#92bbc9]">
+                                        Showing <span class="font-medium text-slate-900 dark:text-white">1</span> to <span class="font-medium text-slate-900 dark:text-white">4</span> of <span class="font-medium text-slate-900 dark:text-white">12</span> results
+                                    </p>
+</div>
+<div>
+<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md shadow-sm">
+<a class="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 dark:ring-[#233f48] dark:hover:bg-[#233f48]" href="#">
+<span class="sr-only">Previous</span>
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</a>
+<a aria-current="page" class="relative z-10 inline-flex items-center bg-primary px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" href="#">1</a>
+<a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 dark:text-white dark:ring-[#233f48] dark:hover:bg-[#233f48]" href="#">2</a>
+<a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 dark:text-white dark:ring-[#233f48] dark:hover:bg-[#233f48]" href="#">3</a>
+<a class="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 dark:ring-[#233f48] dark:hover:bg-[#233f48]" href="#">
+<span class="sr-only">Next</span>
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</a>
+</nav>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Evidence Pack Generator</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13b6ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101d22",
+                        "surface-dark": "#18282f",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for better look in dark mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #101d22;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233f48;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #325a67;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display transition-colors duration-200 min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-[#233f48] bg-background-light dark:bg-[#111e22]/95 backdrop-blur">
+<div class="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">folder_open</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight">RentEvidence</h2>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-slate-600 dark:text-[#92bbc9] hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">Dashboard</a>
+<a class="text-slate-600 dark:text-[#92bbc9] hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">Evidence Log</a>
+<a class="text-primary text-sm font-medium" href="#">My Packs</a>
+<a class="text-slate-600 dark:text-[#92bbc9] hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 dark:text-[#92bbc9] hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border-2 border-primary/20" data-alt="User profile picture placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB3ETjcsrLrj17n2Lc1pTfmEr-lJuUDeyk2rax2r4l5anIm9Tw5pj9xgojR57iGPiJDit3QQSx4Uz1cJDPs9zyu5SaJx5p-q5i8ZZ9d0HcgIlgPzmBFPXCT8jJvD98KFl0moIucmx1fjCIokL0re5rfcn9EPQFUUjf9aQZTS2tmzVY_TwylQ8vbQUL3JnNFHI_ha4Jam5-BYTsjTx2ru6nEWMa6S2pswDA-MY7O7Lq_Ltwj6_W_IB-1h_JEw7X1BWcrA6pqg9gJg3Y");'></div>
+</div>
+</div>
+</header>
+<main class="flex-1 w-full max-w-[1400px] mx-auto px-6 py-8">
+<!-- Breadcrumbs -->
+<div class="flex items-center gap-2 mb-6 text-sm">
+<a class="text-slate-500 dark:text-[#92bbc9] hover:text-primary font-medium" href="#">Dashboard</a>
+<span class="text-slate-400 dark:text-[#587a86] material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-slate-900 dark:text-white font-medium">New Evidence Pack</span>
+</div>
+<!-- Page Heading -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+<div class="max-w-2xl">
+<h1 class="text-3xl md:text-4xl font-black tracking-tight mb-3">Create Evidence Pack</h1>
+<p class="text-slate-500 dark:text-[#92bbc9] text-lg leading-relaxed">Select the issues and evidence items you want to include in your PDF submission for the tribunal or landlord.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-[#325a67] text-slate-700 dark:text-[#92bbc9] font-medium hover:bg-slate-100 dark:hover:bg-[#192d33] transition-colors">Save Draft</button>
+</div>
+</div>
+<div class="grid lg:grid-cols-12 gap-8 h-full">
+<!-- Left Column: Builder (Selection) -->
+<div class="lg:col-span-8 flex flex-col gap-6">
+<!-- Filters and Controls -->
+<div class="bg-white dark:bg-surface-dark rounded-xl p-4 border border-slate-200 dark:border-[#233f48] shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-center">
+<div class="flex items-center gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary text-white px-4 text-sm font-medium shadow-lg shadow-primary/20">
+                            All Issues
+                        </button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-slate-100 dark:bg-[#233f48] text-slate-600 dark:text-[#92bbc9] hover:bg-slate-200 dark:hover:bg-[#325a67] px-4 text-sm font-medium transition-colors">
+                            Repairs
+                        </button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-slate-100 dark:bg-[#233f48] text-slate-600 dark:text-[#92bbc9] hover:bg-slate-200 dark:hover:bg-[#325a67] px-4 text-sm font-medium transition-colors">
+                            Rent
+                        </button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-slate-100 dark:bg-[#233f48] text-slate-600 dark:text-[#92bbc9] hover:bg-slate-200 dark:hover:bg-[#325a67] px-4 text-sm font-medium transition-colors">
+                            Inspections
+                        </button>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<div class="relative w-full sm:w-48">
+<select class="w-full appearance-none bg-slate-100 dark:bg-[#192d33] border border-slate-200 dark:border-[#325a67] text-slate-700 dark:text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-primary">
+<option>Sort by Date (Newest)</option>
+<option>Sort by Date (Oldest)</option>
+<option>Sort by Severity</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2.5 text-slate-500 dark:text-[#92bbc9] pointer-events-none text-[20px]">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Issues List -->
+<div class="space-y-4">
+<!-- Issue Card 1: Expanded -->
+<div class="bg-white dark:bg-surface-dark rounded-xl border-l-4 border-l-orange-500 border-y border-r border-slate-200 dark:border-[#233f48] overflow-hidden shadow-sm">
+<div class="p-5 flex items-start gap-4">
+<div class="pt-1">
+<input checked="" class="size-5 rounded border-slate-300 dark:border-[#325a67] text-primary focus:ring-offset-0 focus:ring-0 bg-slate-50 dark:bg-[#192d33] cursor-pointer" type="checkbox"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">Mold in Bedroom 2 Ceiling</h3>
+<p class="text-sm text-slate-500 dark:text-[#92bbc9]">Reported: Jan 12, 2024 • Category: Repairs</p>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400 text-xs font-semibold uppercase tracking-wide">High Urgency</span>
+</div>
+<p class="text-slate-600 dark:text-slate-300 text-sm mb-4">Ignoring requests for over 3 weeks. Mold is spreading to the wardrobe.</p>
+<!-- Evidence Items -->
+<div class="space-y-2 bg-slate-50 dark:bg-[#111e22] rounded-lg p-3 border border-slate-100 dark:border-[#233f48]">
+<div class="flex items-center gap-3 p-2 hover:bg-white dark:hover:bg-[#192d33] rounded-md transition-colors group">
+<input checked="" class="size-4 rounded border-slate-300 dark:border-[#325a67] text-primary focus:ring-0 bg-transparent cursor-pointer" type="checkbox"/>
+<div class="size-8 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">photo_camera</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">IMG_20240112_MoldCorner.jpg</p>
+<p class="text-xs text-slate-400 dark:text-slate-500">2.4 MB • Uploaded Jan 12</p>
+</div>
+<button class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-primary transition-all">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+<div class="flex items-center gap-3 p-2 hover:bg-white dark:hover:bg-[#192d33] rounded-md transition-colors group">
+<input checked="" class="size-4 rounded border-slate-300 dark:border-[#325a67] text-primary focus:ring-0 bg-transparent cursor-pointer" type="checkbox"/>
+<div class="size-8 rounded bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">Email: Formal Request for Repairs</p>
+<p class="text-xs text-slate-400 dark:text-slate-500">145 KB • Sent Jan 12</p>
+</div>
+<button class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-primary transition-all">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+<div class="flex items-center gap-3 p-2 hover:bg-white dark:hover:bg-[#192d33] rounded-md transition-colors group opacity-60">
+<input class="size-4 rounded border-slate-300 dark:border-[#325a67] text-primary focus:ring-0 bg-transparent cursor-pointer" type="checkbox"/>
+<div class="size-8 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">Generic_Inspection_Notice.pdf (Duplicate)</p>
+<p class="text-xs text-slate-400 dark:text-slate-500">400 KB • Uploaded Jan 15</p>
+</div>
+<button class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-primary transition-all">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Issue Card 2: Collapsed -->
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-[#233f48] shadow-sm hover:border-slate-300 dark:hover:border-[#325a67] transition-colors">
+<div class="p-5 flex items-center gap-4">
+<input checked="" class="size-5 rounded border-slate-300 dark:border-[#325a67] text-primary focus:ring-offset-0 focus:ring-0 bg-slate-50 dark:bg-[#192d33] cursor-pointer" type="checkbox"/>
+<div class="flex-1">
+<div class="flex justify-between items-center">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">Leaking Kitchen Tap</h3>
+<span class="text-xs text-slate-500 dark:text-[#92bbc9]">Dec 04, 2023</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-xs font-medium text-slate-500 dark:text-[#587a86] bg-slate-100 dark:bg-[#192d33] px-2 py-0.5 rounded">Repairs</span>
+<span class="text-xs text-slate-400 dark:text-[#587a86]">• 2 Photos attached</span>
+</div>
+</div>
+<button class="p-2 text-slate-400 dark:text-[#587a86] hover:text-primary transition-colors">
+<span class="material-symbols-outlined">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Issue Card 3: Collapsed -->
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-[#233f48] shadow-sm hover:border-slate-300 dark:hover:border-[#325a67] transition-colors">
+<div class="p-5 flex items-center gap-4">
+<input class="size-5 rounded border-slate-300 dark:border-[#325a67] text-primary focus:ring-offset-0 focus:ring-0 bg-slate-50 dark:bg-[#192d33] cursor-pointer" type="checkbox"/>
+<div class="flex-1 opacity-60">
+<div class="flex justify-between items-center">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">Bond Clean Receipt</h3>
+<span class="text-xs text-slate-500 dark:text-[#92bbc9]">Nov 20, 2023</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-xs font-medium text-slate-500 dark:text-[#587a86] bg-slate-100 dark:bg-[#192d33] px-2 py-0.5 rounded">General</span>
+<span class="text-xs text-slate-400 dark:text-[#587a86]">• 1 PDF attached</span>
+</div>
+</div>
+<button class="p-2 text-slate-400 dark:text-[#587a86] hover:text-primary transition-colors">
+<span class="material-symbols-outlined">expand_more</span>
+</button>
+</div>
+</div>
+<div class="py-4 text-center">
+<button class="text-primary hover:text-primary/80 font-medium text-sm flex items-center justify-center gap-2 mx-auto">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+                            Manually add item to pack
+                        </button>
+</div>
+</div>
+</div>
+<!-- Right Column: Previewer -->
+<div class="lg:col-span-4 flex flex-col h-full">
+<div class="sticky top-24 space-y-6">
+<!-- Preview Card -->
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-[#233f48] shadow-xl overflow-hidden flex flex-col relative group">
+<!-- Decorative Glow -->
+<div class="absolute inset-0 bg-primary/5 dark:bg-primary/10 blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+<div class="relative p-6 border-b border-slate-100 dark:border-[#233f48]">
+<h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">preview</span>
+                                Pack Summary
+                            </h2>
+</div>
+<div class="relative p-8 flex flex-col items-center text-center bg-slate-50/50 dark:bg-[#111e22]/50">
+<!-- PDF Icon Graphic -->
+<div class="relative mb-6">
+<div class="w-24 h-32 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-[#233f48] dark:to-[#192d33] rounded-lg shadow-lg flex items-center justify-center border border-slate-300 dark:border-[#325a67] relative z-10" data-alt="Abstract icon representing a document file">
+<span class="material-symbols-outlined text-5xl text-slate-400 dark:text-[#587a86]">description</span>
+</div>
+<div class="absolute top-2 -right-3 w-24 h-32 bg-slate-100 dark:bg-[#111e22] rounded-lg border border-slate-200 dark:border-[#233f48] -z-0 rotate-6" data-alt="Abstract icon representing a background document page"></div>
+</div>
+<h3 class="text-2xl font-black text-slate-900 dark:text-white mb-1">Preview.pdf</h3>
+<p class="text-sm text-slate-500 dark:text-[#92bbc9] mb-4">Generated on Jan 24, 2024</p>
+<div class="grid grid-cols-2 gap-3 w-full mb-6">
+<div class="bg-white dark:bg-[#192d33] p-3 rounded-lg border border-slate-100 dark:border-[#233f48]">
+<p class="text-xs text-slate-500 dark:text-[#92bbc9] uppercase font-semibold">Issues</p>
+<p class="text-xl font-bold text-slate-900 dark:text-white">2</p>
+</div>
+<div class="bg-white dark:bg-[#192d33] p-3 rounded-lg border border-slate-100 dark:border-[#233f48]">
+<p class="text-xs text-slate-500 dark:text-[#92bbc9] uppercase font-semibold">Evidence</p>
+<p class="text-xl font-bold text-slate-900 dark:text-white">4 Files</p>
+</div>
+<div class="bg-white dark:bg-[#192d33] p-3 rounded-lg border border-slate-100 dark:border-[#233f48]">
+<p class="text-xs text-slate-500 dark:text-[#92bbc9] uppercase font-semibold">Est. Size</p>
+<p class="text-xl font-bold text-slate-900 dark:text-white">4.2 MB</p>
+</div>
+<div class="bg-white dark:bg-[#192d33] p-3 rounded-lg border border-slate-100 dark:border-[#233f48]">
+<p class="text-xs text-slate-500 dark:text-[#92bbc9] uppercase font-semibold">Pages</p>
+<p class="text-xl font-bold text-slate-900 dark:text-white">~14</p>
+</div>
+</div>
+<button class="w-full py-4 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold text-lg shadow-lg shadow-primary/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+                                Generate Evidence Pack
+                            </button>
+<p class="mt-4 text-xs text-slate-400 dark:text-[#587a86]">
+                                By generating this pack, you agree to the <a class="underline hover:text-primary" href="#">Terms of Use</a> regarding evidence submission.
+                            </p>
+</div>
+</div>
+<!-- Structure Preview -->
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-[#233f48] p-5 shadow-sm">
+<h4 class="text-sm font-semibold text-slate-900 dark:text-white mb-4 uppercase tracking-wider">Document Structure</h4>
+<div class="space-y-0 relative">
+<!-- Vertical line connector -->
+<div class="absolute left-[11px] top-2 bottom-4 w-0.5 bg-slate-200 dark:bg-[#233f48]"></div>
+<div class="relative flex items-center gap-3 pb-4">
+<div class="size-6 rounded-full bg-green-500 dark:bg-green-600 border-2 border-white dark:border-surface-dark z-10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] text-white">check</span>
+</div>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-200">Cover Sheet</span>
+</div>
+<div class="relative flex items-center gap-3 pb-4">
+<div class="size-6 rounded-full bg-green-500 dark:bg-green-600 border-2 border-white dark:border-surface-dark z-10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] text-white">check</span>
+</div>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-200">Table of Contents</span>
+</div>
+<div class="relative flex items-center gap-3 pb-4">
+<div class="size-6 rounded-full bg-primary border-2 border-white dark:border-surface-dark z-10 flex items-center justify-center shadow-lg shadow-primary/30">
+<span class="material-symbols-outlined text-[14px] text-white">edit_document</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-primary">Evidence Body</span>
+<span class="text-xs text-slate-400 dark:text-[#587a86]">Sorted by Date (Newest)</span>
+</div>
+</div>
+<div class="relative flex items-center gap-3">
+<div class="size-6 rounded-full bg-slate-200 dark:bg-[#233f48] border-2 border-white dark:border-surface-dark z-10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] text-slate-400">gavel</span>
+</div>
+<span class="text-sm font-medium text-slate-400 dark:text-slate-500">Legal Appendix (Optional)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

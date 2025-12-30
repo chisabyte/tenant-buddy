@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tenant Buddy Dashboard</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13b6ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#111e22",
+                        "card-dark": "#192d33",
+                        "card-lighter": "#233f48",
+                        "text-subtle": "#92bbc9"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#111e22] dark:text-white antialiased selection:bg-primary selection:text-white">
+<div class="relative flex h-screen w-full flex-row overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="flex h-full w-[260px] flex-col justify-between bg-card-dark border-r border-card-lighter p-4 hidden md:flex shrink-0">
+<div class="flex flex-col gap-8">
+<!-- Branding -->
+<div class="flex items-center gap-3 px-2">
+<div class="bg-primary/20 rounded-lg p-2 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-size: 28px;">shield</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-white text-lg font-bold leading-tight">Tenant Buddy</h1>
+<p class="text-text-subtle text-xs font-normal">Organized Renting</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary group transition-colors" href="#">
+<span class="material-symbols-outlined fill">dashboard</span>
+<p class="text-sm font-medium">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-card-lighter hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">warning</span>
+<p class="text-sm font-medium">My Issues</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-card-lighter hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">folder_special</span>
+<p class="text-sm font-medium">Evidence Locker</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-card-lighter hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">event_upcoming</span>
+<p class="text-sm font-medium">Deadlines</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-card-lighter hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">settings</span>
+<p class="text-sm font-medium">Settings</p>
+</a>
+</nav>
+</div>
+<!-- Bottom Actions -->
+<div class="flex flex-col gap-4">
+<div class="px-3 py-2">
+<div class="flex items-center gap-2 text-text-subtle text-xs mb-2">
+<span class="material-symbols-outlined text-[16px] text-green-500">lock</span>
+<span>Data is encrypted &amp; secure</span>
+</div>
+</div>
+<div class="flex items-center gap-3 px-3 py-3 rounded-lg bg-card-lighter border border-card-lighter/50">
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-10 w-10 border-2 border-primary" data-alt="Profile picture of user Alex" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAJfXaugFK84NHnesP9VFx3W3Q6nNnfoN1_wEOWyOcd1vR379t6XRRXkmuegB2BE_BN9dTts6zFm6VX4PP0kmbF4xjlyuu4ueN_Hhpp29apM3ZpVoU1WH8a4QO-1D_NQruzrZUBweSgz4OyujHYf1NdmWmywd-1un4laNplDnKpdGRQwQNIUC6M5INqA_g7yxUb3dV0rez0F5Bvl9cs5rypVLSTBZ-ODoy1NlBQSxczsfd8vPDCHTms-PAdl6UemLHK5sqzH3y-nSQ");'>
+</div>
+<div class="flex flex-col overflow-hidden">
+<p class="text-white text-sm font-medium truncate">Alex Johnson</p>
+<p class="text-text-subtle text-xs truncate">Tenant at 123 Kangaroo St</p>
+</div>
+</div>
+<button class="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg h-12 px-4 bg-primary hover:bg-primary/90 transition-colors text-background-dark text-sm font-bold shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="truncate">Log New Issue</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full overflow-y-auto bg-background-light dark:bg-background-dark">
+<!-- Mobile Header (Visible only on small screens) -->
+<div class="md:hidden flex items-center justify-between p-4 bg-card-dark border-b border-card-lighter sticky top-0 z-20">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">shield</span>
+<h1 class="text-white font-bold">Tenant Buddy</h1>
+</div>
+<button class="text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+<div class="flex flex-col max-w-[1200px] w-full mx-auto p-4 md:p-8 gap-8">
+<!-- Hero Section -->
+<div class="relative w-full rounded-xl overflow-hidden shadow-2xl">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Modern clean living room interior dark theme" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuByy0uf3C9R0wsqoruXAVJNHRb0oQeSpAUkKIVxooDfIcqS4zBRM8I-J4FP2wX0F-uNgnCwNbQBbT3iAYe7mHEDrxzKEI9Nkhz0hEwJxya-OAUdSbQzrcWEuMa1K8uuyyHf9kuXkfP0N0Rc8XYEu5tvVtTpmlH9EI2dFHtqpaCiKuRCw5UKyNl6h9WpcLNfJ7zXskVx52OERQCXxTX3h-0OKfOM6cDuwwXcETsP07-2PhIYEfMv1RPzqSHmYO2wu_7YT0wGcbsA9iI");'>
+</div>
+<div class="absolute inset-0 bg-gradient-to-r from-card-dark via-card-dark/90 to-transparent"></div>
+<div class="relative z-10 flex flex-col gap-4 p-6 md:p-10 max-w-2xl">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 w-fit backdrop-blur-sm">
+<span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+<span class="text-xs font-medium text-primary tracking-wide uppercase">System Secure</span>
+</div>
+<h1 class="text-white text-3xl md:text-4xl font-black leading-tight tracking-tight">
+                            Welcome back, Alex
+                        </h1>
+<p class="text-gray-300 text-base md:text-lg font-light leading-relaxed max-w-lg">
+                            Your tenancy at <span class="text-white font-medium">123 Kangaroo St, Melbourne</span> is being monitored. Your latest condition report is safe.
+                        </p>
+<div class="flex flex-wrap gap-3 mt-2">
+<button class="flex items-center justify-center gap-2 rounded-lg h-10 px-5 bg-primary text-background-dark font-bold text-sm hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                                Log Issue
+                            </button>
+<button class="flex items-center justify-center gap-2 rounded-lg h-10 px-5 bg-white/10 text-white font-medium text-sm border border-white/20 hover:bg-white/20 transition-colors backdrop-blur-sm">
+<span class="material-symbols-outlined text-[20px]">upload_file</span>
+                                Upload Evidence
+                            </button>
+</div>
+</div>
+</div>
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Stat Card 1 -->
+<div class="flex flex-col p-5 rounded-xl bg-card-dark border border-card-lighter hover:border-primary/30 transition-colors group">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 rounded-lg bg-orange-500/20 text-orange-400">
+<span class="material-symbols-outlined">warning</span>
+</div>
+<span class="text-xs font-medium text-text-subtle bg-card-lighter px-2 py-1 rounded">Needs Action</span>
+</div>
+<p class="text-text-subtle text-sm font-medium">Active Issues</p>
+<p class="text-white text-3xl font-bold mt-1 group-hover:text-primary transition-colors">2</p>
+</div>
+<!-- Stat Card 2 -->
+<div class="flex flex-col p-5 rounded-xl bg-card-dark border border-card-lighter hover:border-primary/30 transition-colors group">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 rounded-lg bg-primary/20 text-primary">
+<span class="material-symbols-outlined">calendar_clock</span>
+</div>
+<span class="text-xs font-medium text-text-subtle bg-card-lighter px-2 py-1 rounded">Upcoming</span>
+</div>
+<p class="text-text-subtle text-sm font-medium">Next Inspection</p>
+<p class="text-white text-3xl font-bold mt-1 group-hover:text-primary transition-colors">14 Days</p>
+</div>
+<!-- Stat Card 3 -->
+<div class="flex flex-col p-5 rounded-xl bg-card-dark border border-card-lighter hover:border-primary/30 transition-colors group">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 rounded-lg bg-green-500/20 text-green-400">
+<span class="material-symbols-outlined">folder_check</span>
+</div>
+<span class="text-xs font-medium text-text-subtle bg-card-lighter px-2 py-1 rounded">Encrypted</span>
+</div>
+<p class="text-text-subtle text-sm font-medium">Documents Secure</p>
+<p class="text-white text-3xl font-bold mt-1 group-hover:text-primary transition-colors">24</p>
+</div>
+</div>
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Active Issues Table -->
+<div class="lg:col-span-2 flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<h2 class="text-white text-xl font-bold tracking-tight">Active Tenancy Issues</h2>
+<a class="text-primary text-sm font-medium hover:text-white transition-colors" href="#">View All</a>
+</div>
+<div class="overflow-hidden rounded-xl border border-card-lighter bg-card-dark">
+<table class="w-full text-left border-collapse">
+<thead class="bg-card-lighter">
+<tr>
+<th class="p-4 text-xs font-semibold text-text-subtle uppercase tracking-wider w-1/3">Issue Title</th>
+<th class="p-4 text-xs font-semibold text-text-subtle uppercase tracking-wider hidden sm:table-cell">Reported</th>
+<th class="p-4 text-xs font-semibold text-text-subtle uppercase tracking-wider">Status</th>
+<th class="p-4 text-xs font-semibold text-text-subtle uppercase tracking-wider text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-card-lighter">
+<tr class="group hover:bg-card-lighter/50 transition-colors">
+<td class="p-4">
+<div class="flex flex-col">
+<span class="text-white font-medium text-sm">Leaking Tap in Kitchen</span>
+<span class="text-text-subtle text-xs sm:hidden mt-1">Reported Oct 12</span>
+</div>
+</td>
+<td class="p-4 text-text-subtle text-sm hidden sm:table-cell">Oct 12</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 text-xs font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                                                Waiting for Landlord
+                                            </span>
+</td>
+<td class="p-4 text-right">
+<button class="text-text-subtle hover:text-primary transition-colors text-sm font-medium">Details</button>
+</td>
+</tr>
+<tr class="group hover:bg-card-lighter/50 transition-colors">
+<td class="p-4">
+<div class="flex flex-col">
+<span class="text-white font-medium text-sm">Mold in Bathroom</span>
+<span class="text-text-subtle text-xs sm:hidden mt-1">Reported Oct 10</span>
+</div>
+</td>
+<td class="p-4 text-text-subtle text-sm hidden sm:table-cell">Oct 10</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                                Evidence Collected
+                                            </span>
+</td>
+<td class="p-4 text-right">
+<button class="text-text-subtle hover:text-primary transition-colors text-sm font-medium">Details</button>
+</td>
+</tr>
+<tr class="group hover:bg-card-lighter/50 transition-colors">
+<td class="p-4">
+<div class="flex flex-col">
+<span class="text-white font-medium text-sm">Broken Blind (Lounge)</span>
+<span class="text-text-subtle text-xs sm:hidden mt-1">Reported Sep 28</span>
+</div>
+</td>
+<td class="p-4 text-text-subtle text-sm hidden sm:table-cell">Sep 28</td>
+<td class="p-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-xs font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                                                Repair Scheduled
+                                            </span>
+</td>
+<td class="p-4 text-right">
+<button class="text-text-subtle hover:text-primary transition-colors text-sm font-medium">Details</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Recent Activity/Feed -->
+<div class="mt-4">
+<h2 class="text-white text-xl font-bold tracking-tight mb-4">Recent Activity</h2>
+<div class="flex flex-col gap-3">
+<!-- Activity Item -->
+<div class="flex items-start gap-4 p-4 rounded-xl bg-card-dark border border-card-lighter">
+<div class="p-2 rounded-lg bg-card-lighter text-text-subtle shrink-0">
+<span class="material-symbols-outlined">mark_email_read</span>
+</div>
+<div class="flex flex-col gap-1 w-full">
+<div class="flex justify-between items-start">
+<p class="text-white text-sm font-medium">Email sent to Agent (Ray White)</p>
+<span class="text-text-subtle text-xs">2h ago</span>
+</div>
+<p class="text-text-subtle text-sm">Re: Kitchen Tap Follow up</p>
+</div>
+</div>
+<!-- Activity Item -->
+<div class="flex items-start gap-4 p-4 rounded-xl bg-card-dark border border-card-lighter">
+<div class="p-2 rounded-lg bg-card-lighter text-text-subtle shrink-0">
+<span class="material-symbols-outlined">image</span>
+</div>
+<div class="flex flex-col gap-1 w-full">
+<div class="flex justify-between items-start">
+<p class="text-white text-sm font-medium">Uploaded 3 new photos</p>
+<span class="text-text-subtle text-xs">Yesterday</span>
+</div>
+<p class="text-text-subtle text-sm">Evidence for bathroom mold issue</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Quick Actions & Tools -->
+<div class="flex flex-col gap-6">
+<!-- Quick Actions Card -->
+<div class="p-6 rounded-xl bg-card-dark border border-card-lighter">
+<h3 class="text-white text-lg font-bold mb-4">Quick Tools</h3>
+<div class="grid grid-cols-1 gap-3">
+<button class="flex items-center gap-3 p-3 rounded-lg bg-card-lighter hover:bg-card-lighter/80 border border-transparent hover:border-primary/50 transition-all group">
+<div class="p-2 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-background-dark transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_a_photo</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-white text-sm font-medium">Upload Photo</span>
+<span class="text-text-subtle text-xs">Add evidence securely</span>
+</div>
+</button>
+<button class="flex items-center gap-3 p-3 rounded-lg bg-card-lighter hover:bg-card-lighter/80 border border-transparent hover:border-primary/50 transition-all group">
+<div class="p-2 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-background-dark transition-colors">
+<span class="material-symbols-outlined text-[20px]">drafts</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-white text-sm font-medium">Email Template</span>
+<span class="text-text-subtle text-xs">Contact property manager</span>
+</div>
+</button>
+<button class="flex items-center gap-3 p-3 rounded-lg bg-card-lighter hover:bg-card-lighter/80 border border-transparent hover:border-primary/50 transition-all group">
+<div class="p-2 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-background-dark transition-colors">
+<span class="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-white text-sm font-medium">Generate Evidence Pack</span>
+<span class="text-text-subtle text-xs">Export for VCAT/Tribunal</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Promo/Tip Card -->
+<div class="relative p-6 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-card-dark border border-primary/20">
+<div class="relative z-10 flex flex-col gap-3">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-background-dark mb-1">
+<span class="material-symbols-outlined">lightbulb</span>
+</div>
+<h3 class="text-white text-lg font-bold">Renting Tip</h3>
+<p class="text-text-subtle text-sm leading-relaxed">
+                                    Did you know? In Victoria, you must be given at least 24 hours notice before an inspection. Keep your "Entry Notice" emails saved in the locker.
+                                </p>
+<button class="text-primary text-sm font-bold text-left hover:text-white transition-colors mt-2">Read Tenant Rights →</button>
+</div>
+<!-- Abstract decoration -->
+<div class="absolute -right-6 -bottom-6 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
+</div>
+</div>
+</div>
+<footer class="mt-8 border-t border-card-lighter pt-8 pb-4 text-center md:text-left">
+<p class="text-text-subtle text-xs">
+                        © 2023 Tenant Buddy Australia. All data is encrypted locally. 
+                        <a class="text-primary hover:underline ml-2" href="#">Privacy Policy</a>
+<a class="text-primary hover:underline ml-2" href="#">Terms of Service</a>
+</p>
+</footer>
+</div>
+</main>
+</div>
+</body></html>

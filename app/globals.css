@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 200 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 25% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 25% 10%;
+    --primary: 195 87% 50%;
+    --primary-foreground: 200 25% 10%;
+    --secondary: 200 20% 96%;
+    --secondary-foreground: 200 25% 10%;
+    --muted: 200 20% 96%;
+    --muted-foreground: 200 15% 45%;
+    --accent: 200 20% 96%;
+    --accent-foreground: 200 25% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 200 20% 90%;
+    --input: 200 20% 90%;
+    --ring: 195 87% 50%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    /* Brand colors: primary #13b6ec, bg #111e22, surface #192d33, border #233f48, subtle text #92bbc9 */
+    --background: 195 32% 11%;
+    --foreground: 0 0% 100%;
+    --card: 195 26% 16%;
+    --card-foreground: 0 0% 100%;
+    --popover: 195 26% 16%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 195 87% 50%;
+    --primary-foreground: 195 32% 11%;
+    --secondary: 195 22% 25%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 195 22% 25%;
+    --muted-foreground: 195 35% 66%;
+    --accent: 195 22% 25%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 195 28% 30%;
+    --input: 195 28% 30%;
+    --ring: 195 87% 50%;
+    --chart-1: 195 87% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: hsl(195 30% 10%);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(195 25% 22%);
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(195 25% 30%);
+}
+
+/* Mobile-first responsive utilities */
+@layer utilities {
+  .mobile-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  .mobile-container {
+    @apply w-full max-w-7xl mx-auto mobile-padding;
+  }
+
+  .thumb-friendly {
+    @apply min-h-[44px] min-w-[44px];
+  }
+}
+
+/* Surface color utilities for the new dark theme */
+@layer utilities {
+  .bg-surface {
+    @apply bg-white dark:bg-card-dark;
+  }
+  .bg-surface-dark {
+    @apply bg-slate-50 dark:bg-background-dark;
+  }
+  .border-surface {
+    @apply border-slate-200 dark:border-card-lighter;
+  }
+  .text-subtle {
+    @apply text-slate-500 dark:text-text-subtle;
+  }
+}
+
+/* Dark mode select/dropdown styling */
+.dark select,
+.dark select option {
+  background-color: #111e22;
+  color: white;
+}
+
+.dark select option {
+  background-color: #192d33;
+  color: white;
+  padding: 8px;
+}
+
+.dark select option:hover,
+.dark select option:focus,
+.dark select option:checked {
+  background-color: #233f48;
+  color: white;
+}
+
+/* Ensure select dropdowns have proper styling in dark mode */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.dark select::-ms-expand {
+  display: none;
+}
