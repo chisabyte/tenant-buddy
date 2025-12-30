@@ -194,6 +194,11 @@ export default function PricingPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        // If user is not logged in, redirect to signup
+        if (response.status === 401) {
+          router.push(`/auth/signup?redirect=/pricing&plan=${plan}`);
+          return;
+        }
         throw new Error(data.error || "Failed to create checkout session");
       }
 

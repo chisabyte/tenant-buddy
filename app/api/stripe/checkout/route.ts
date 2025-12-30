@@ -52,10 +52,12 @@ export async function POST(request: NextRequest) {
 
     // Get the price ID
     const priceId = getPriceId(plan, interval);
+    console.log(`[Stripe Checkout] Plan: ${plan}, Interval: ${interval}, Price ID: ${priceId || 'MISSING'}`);
+
     if (!priceId) {
-      console.error(`[Stripe Checkout] Missing price ID for ${plan}/${interval}`);
+      console.error(`[Stripe Checkout] Missing price ID for ${plan}/${interval}. Check env vars: STRIPE_PRICE_PLUS_MONTHLY, STRIPE_PRICE_PLUS_YEARLY, STRIPE_PRICE_PRO_MONTHLY, STRIPE_PRICE_PRO_YEARLY`);
       return NextResponse.json(
-        { error: "Pricing not configured. Please try again later." },
+        { error: `Pricing not configured for ${plan} (${interval}). Please contact support.` },
         { status: 500 }
       );
     }
