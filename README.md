@@ -120,7 +120,8 @@ SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
 
 # Optional - AI Features (OFF by default)
 ENABLE_AI_FEATURES=false
-ANTHROPIC_API_KEY=sk-ant-api03-...
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
 ```
 
 See `.env.example` for all available variables with descriptions.
