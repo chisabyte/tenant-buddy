@@ -71,6 +71,9 @@ importers:
       react-hook-form:
         specifier: ^7.53.2
         version: 7.69.0(react@18.3.1)
+      stripe:
+        specifier: ^20.1.0
+        version: 20.1.0(@types/node@22.19.3)
       tailwind-merge:
         specifier: ^2.5.4
         version: 2.6.0
@@ -2995,6 +2998,10 @@ packages:
   pure-rand@6.1.0:
     resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
 
+  qs@6.14.1:
+    resolution: {integrity: sha512-4EK3+xJl8Ts67nLYNwqw/dsFVnCf+qR7RgXSK9jEEm9unao3njwMDdmsdvoKBKHzxd7tCYz5e5M+SnMjdtXGQQ==}
+    engines: {node: '>=0.6'}
+
   querystringify@2.2.0:
     resolution: {integrity: sha512-FIqgj2EUvTa7R50u0rGsyTftzjYmv/a3hO345bZNrqabNqjtgiDMgmo4mkUjd+nzU5oF3dClKqFIPUKybUyqoQ==}
 
@@ -3291,6 +3298,15 @@ packages:
   strip-json-comments@3.1.1:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
+
+  stripe@20.1.0:
+    resolution: {integrity: sha512-o1VNRuMkY76ZCq92U3EH3/XHm/WHp7AerpzDs4Zyo8uE5mFL4QUcv/2SudWsSnhBSp4moO2+ZoGCZ7mT8crPmQ==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@types/node': '>=16'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   styled-jsx@5.1.1:
     resolution: {integrity: sha512-pW7uC1l4mBZ8ugbiZrcIsiIvVx1UmTfw7UkC3Um2tmfUq9Bhk8IiyEIPl6F8agHgjzku6j0xQEZbfA5uSgSaCw==}
@@ -6980,6 +6996,10 @@ snapshots:
 
   pure-rand@6.1.0: {}
 
+  qs@6.14.1:
+    dependencies:
+      side-channel: 1.1.0
+
   querystringify@2.2.0: {}
 
   queue-microtask@1.2.3: {}
@@ -7307,6 +7327,12 @@ snapshots:
       min-indent: 1.0.1
 
   strip-json-comments@3.1.1: {}
+
+  stripe@20.1.0(@types/node@22.19.3):
+    dependencies:
+      qs: 6.14.1
+    optionalDependencies:
+      '@types/node': 22.19.3
 
   styled-jsx@5.1.1(@babel/core@7.28.5)(react@18.3.1):
     dependencies:
