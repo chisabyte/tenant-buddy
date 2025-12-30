@@ -112,8 +112,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         supabase_user_id: user.id,
       },
-      // Australian locale and currency
-      locale: "en-AU",
+      // Currency set to AUD (Stripe will auto-detect locale from customer/browser)
       currency: "aud",
     });
 

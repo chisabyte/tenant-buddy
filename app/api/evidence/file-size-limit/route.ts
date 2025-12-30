@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserPlan } from "@/lib/billing";
 import { requireAuth, handleApiError } from "@/lib/api-error-handler";
 
+// Mark as dynamic since it uses cookies for auth
+export const dynamic = "force-dynamic";
+
 /**
  * Get the maximum file size allowed for the current user's plan
  */

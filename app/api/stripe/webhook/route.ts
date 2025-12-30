@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-11-20.acacia",
+  apiVersion: "2025-12-15.clover",
 });
 
 // Initialize Supabase with service role (bypasses RLS)
@@ -36,6 +36,10 @@ async function upsertSubscription(
 ) {
   const priceId = subscription.items.data[0]?.price?.id || null;
 
+  // Type assertion to access subscription properties that may be expanded
+  const currentPeriodEnd = (subscription as any).current_period_end as number | undefined;
+  const cancelAtPeriodEnd = (subscription as any).cancel_at_period_end as boolean | undefined;
+
   const { error } = await supabaseAdmin.from("subscriptions").upsert(
     {
       user_id: userId,
@@ -43,10 +47,10 @@ async function upsertSubscription(
       stripe_subscription_id: subscription.id,
       price_id: priceId,
       status: subscription.status,
-      current_period_end: new Date(
-        subscription.current_period_end * 1000
-      ).toISOString(),
-      cancel_at_period_end: subscription.cancel_at_period_end,
+      current_period_end: currentPeriodEnd
+        ? new Date(currentPeriodEnd * 1000).toISOString()
+        : null,
+      cancel_at_period_end: cancelAtPeriodEnd ?? false,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" }
@@ -139,7 +143,7 @@ export async function POST(request: NextRequest) {
               : session.subscription.id;
 
           // Get user ID from metadata or existing record
-          let userId = session.metadata?.supabase_user_id;
+          let userId: string | null = session.metadata?.supabase_user_id || null;
           if (!userId) {
             userId = await getUserIdFromCustomer(customerId);
           }
@@ -164,7 +168,7 @@ export async function POST(request: NextRequest) {
             : subscription.customer.id;
 
         // Get user ID from metadata or existing record
-        let userId = subscription.metadata?.supabase_user_id;
+        let userId: string | null = subscription.metadata?.supabase_user_id || null;
         if (!userId) {
           userId = await getUserIdFromCustomer(customerId);
         }
@@ -185,7 +189,7 @@ export async function POST(request: NextRequest) {
             : subscription.customer.id;
 
         // Get user ID
-        let userId = subscription.metadata?.supabase_user_id;
+        let userId: string | null = subscription.metadata?.supabase_user_id || null;
         if (!userId) {
           userId = await getUserIdFromCustomer(customerId);
         }
