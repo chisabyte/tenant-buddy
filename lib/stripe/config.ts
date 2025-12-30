@@ -1,12 +1,34 @@
 import Stripe from "stripe";
 
 /**
- * Stripe client instance
+ * Get Stripe client instance (lazy initialization)
  * Only use on server-side
+ * This prevents initialization errors during build when env vars aren't available
  */
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-12-15.clover",
-  typescript: true,
+let stripeInstance: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error("STRIPE_SECRET_KEY is not set in environment variables");
+    }
+    stripeInstance = new Stripe(secretKey, {
+      apiVersion: "2025-12-15.clover",
+      typescript: true,
+    });
+  }
+  return stripeInstance;
+}
+
+/**
+ * Stripe client instance (lazy getter - only initializes when accessed)
+ * This prevents build-time errors when env vars aren't available
+ */
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return getStripe()[prop as keyof Stripe];
+  },
 });
 
 /**

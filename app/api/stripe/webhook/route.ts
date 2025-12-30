@@ -9,10 +9,21 @@ export const runtime = "nodejs";
 // Disable body parsing - we need raw body for signature verification
 export const dynamic = "force-dynamic";
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-12-15.clover",
-});
+/**
+ * Get Stripe client (lazy initialization to avoid build-time errors)
+ */
+function getStripe(): Stripe {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error("STRIPE_SECRET_KEY is not set in environment variables");
+  }
+  return new Stripe(secretKey, {
+    apiVersion: "2025-12-15.clover",
+  });
+}
+
+// Lazy stripe instance - only initialized when needed
+let stripe: Stripe | null = null;
 
 // Initialize Supabase with service role (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -84,6 +95,7 @@ async function getUserIdFromCustomer(customerId: string): Promise<string | null>
   }
 
   // Try to get from Stripe customer metadata
+  if (!stripe) stripe = getStripe();
   const customer = await stripe.customers.retrieve(customerId);
   if (customer.deleted) return null;
 
@@ -117,6 +129,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!stripe) stripe = getStripe();
+    
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
@@ -150,6 +164,7 @@ export async function POST(request: NextRequest) {
 
           if (userId) {
             // Fetch full subscription details
+            if (!stripe) stripe = getStripe();
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             await upsertSubscription(userId, customerId, subscription);
           } else {
