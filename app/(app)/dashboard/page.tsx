@@ -1,25 +1,35 @@
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { StatCard } from "@/components/stat-card";
+import { RiskMetric } from "@/components/risk-metric";
+import { CaseHealthCard } from "@/components/case-health-card";
+import { NextStepCard, NoActionNeededCard } from "@/components/next-step-card";
 import Link from "next/link";
 import { getCurrentUserPlan } from "@/lib/billing";
 import {
+  calculateOverallHealth,
+  getWeakestIssue,
+  type IssueHealthData,
+} from "@/lib/case-health";
+import {
   AlertTriangle,
-  CalendarClock,
-  FolderCheck,
+  Clock,
+  FileWarning,
+  ShieldAlert,
   Plus,
   Upload,
   Mail,
   FileText,
-  Image as ImageIcon,
   Crown,
+  ArrowRight,
+  Calendar,
 } from "lucide-react";
-import { format } from "date-fns";
-import { DashboardInsightPanel } from "@/components/dashboard-insight-panel";
+import { differenceInDays } from "date-fns";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return null;
@@ -34,289 +44,417 @@ export default async function DashboardPage() {
 
   const property = properties?.[0];
 
-  // Get stats
-  const { count: openIssuesCount } = await supabase
-    .from("issues")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .in("status", ["open", "in_progress"]);
-
-  const { count: evidenceCount } = await supabase
-    .from("evidence_items")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  // Get all issues with severity for insights
+  // Get all issues with details
   const { data: allIssues } = await supabase
     .from("issues")
-    .select(`
+    .select(
+      `
       id,
       title,
+      description,
       status,
       severity,
       created_at,
-      updated_at,
-      properties!inner(address_text)
-    `)
+      updated_at
+    `
+    )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  // Get active issues for the table (first 5)
-  const activeIssues = allIssues?.filter(
-    (i) => i.status === "open" || i.status === "in_progress"
-  ).slice(0, 5);
-
-  // Get evidence counts per issue for insights
+  // Get evidence items with dates
   const { data: evidenceItems } = await supabase
     .from("evidence_items")
-    .select("issue_id")
+    .select("issue_id, created_at")
     .eq("user_id", user.id)
-    .not("issue_id", "is", null);
+    .not("issue_id", "is", null)
+    .order("created_at", { ascending: false });
 
+  // Get comms logs with dates
+  const { data: commsItems } = await supabase
+    .from("comms_logs")
+    .select("issue_id, occurred_at")
+    .eq("user_id", user.id)
+    .not("issue_id", "is", null)
+    .order("occurred_at", { ascending: false });
+
+  // Build evidence data maps
   const evidenceCountMap = new Map<string, number>();
+  const lastEvidenceMap = new Map<string, string>();
   evidenceItems?.forEach((item) => {
     if (item.issue_id) {
       evidenceCountMap.set(
         item.issue_id,
         (evidenceCountMap.get(item.issue_id) || 0) + 1
       );
+      if (!lastEvidenceMap.has(item.issue_id)) {
+        lastEvidenceMap.set(item.issue_id, item.created_at);
+      }
     }
   });
 
-  // Get comms counts per issue for insights
-  const { data: commsItems } = await supabase
-    .from("comms_logs")
-    .select("issue_id")
-    .eq("user_id", user.id)
-    .not("issue_id", "is", null);
-
+  // Build comms data maps
   const commsCountMap = new Map<string, number>();
+  const lastCommsMap = new Map<string, string>();
   commsItems?.forEach((item) => {
     if (item.issue_id) {
       commsCountMap.set(
         item.issue_id,
         (commsCountMap.get(item.issue_id) || 0) + 1
       );
+      if (!lastCommsMap.has(item.issue_id)) {
+        lastCommsMap.set(item.issue_id, item.occurred_at);
+      }
     }
   });
 
-  // Get user's first name from email
-  const userName = user.email?.split("@")[0] || "there";
+  // Prepare issue health data
+  const issuesHealthData: IssueHealthData[] = (allIssues || []).map((issue) => ({
+    issue: {
+      ...issue,
+      severity: issue.severity || undefined,
+    },
+    evidenceCount: evidenceCountMap.get(issue.id) || 0,
+    commsCount: commsCountMap.get(issue.id) || 0,
+    lastEvidenceDate: lastEvidenceMap.get(issue.id) || null,
+    lastCommsDate: lastCommsMap.get(issue.id) || null,
+  }));
+
+  // Calculate case health
+  const overallHealth = calculateOverallHealth(issuesHealthData);
+  const weakestIssue = getWeakestIssue(issuesHealthData);
+
+  // Filter active issues
+  const activeIssues = (allIssues || []).filter(
+    (i) => i.status === "open" || i.status === "in_progress"
+  );
+
+  // Calculate risk metrics
+  const issuesWithNoEvidence = activeIssues.filter(
+    (i) => !evidenceCountMap.has(i.id) || evidenceCountMap.get(i.id) === 0
+  );
+
+  // Find days since last communication across all issues
+  const allCommsArray = commsItems || [];
+  let daysSinceLastComms: number | null = null;
+  if (allCommsArray.length > 0) {
+    const latestComms = new Date(allCommsArray[0].occurred_at);
+    daysSinceLastComms = differenceInDays(new Date(), latestComms);
+  }
+
+  // Get high severity unresolved issues
+  const highSeverityIssues = activeIssues.filter(
+    (i) => i.severity === "Urgent" || i.severity === "High"
+  );
 
   // Get current plan
   const plan = await getCurrentUserPlan();
 
+  // Determine hero message based on case health
+  const getHeroMessage = () => {
+    if (activeIssues.length === 0) {
+      return {
+        headline: "No Active Issues",
+        subtext: "Your tenancy records are secure. Log any new issues as they arise.",
+        statusClass: "bg-green-400",
+        statusText: "All Clear",
+      };
+    }
+    if (overallHealth.status === "at-risk") {
+      return {
+        headline: "Your Case Needs Attention",
+        subtext: `${issuesWithNoEvidence.length} issue${issuesWithNoEvidence.length !== 1 ? "s" : ""} without evidence. Take action now to protect your position.`,
+        statusClass: "bg-red-400",
+        statusText: "At Risk",
+      };
+    }
+    if (overallHealth.status === "weak") {
+      return {
+        headline: "Strengthen Your Position",
+        subtext: "Your documentation has gaps. Address the recommendations below.",
+        statusClass: "bg-amber-400",
+        statusText: "Needs Work",
+      };
+    }
+    if (overallHealth.status === "adequate") {
+      return {
+        headline: "Good Progress",
+        subtext: "Your case is building. Continue documenting to strengthen your position.",
+        statusClass: "bg-primary",
+        statusText: "On Track",
+      };
+    }
+    return {
+      headline: "Well Documented",
+      subtext: "Your tenancy records are strong. Continue maintaining your documentation.",
+      statusClass: "bg-green-400",
+      statusText: "Protected",
+    };
+  };
+
+  const heroMessage = getHeroMessage();
+
   return (
-    <div className="flex flex-col max-w-[1200px] w-full mx-auto p-4 md:p-8 gap-8">
-      {/* Hero Section */}
-      <div className="relative w-full rounded-xl overflow-hidden shadow-2xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-card-dark via-card-dark/90 to-transparent" />
-        <div className="relative z-10 flex flex-col gap-4 p-6 md:p-10 max-w-2xl">
+    <div className="flex flex-col max-w-[1200px] w-full mx-auto p-4 md:p-8 gap-6">
+      {/* Hero Section - Risk-Aware */}
+      <div className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-card-dark border border-card-lighter">
+        <div className="relative z-10 flex flex-col gap-4 p-6 md:p-8">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 w-fit backdrop-blur-sm">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-xs font-medium text-primary tracking-wide uppercase">
-                System Secure
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card-lighter border border-card-lighter w-fit">
+              <span className={`w-2 h-2 rounded-full ${heroMessage.statusClass}`} />
+              <span className="text-xs font-medium text-text-subtle tracking-wide uppercase">
+                {heroMessage.statusText}
               </span>
             </div>
             {plan.isOwner && (
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/30 w-fit backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/30 w-fit">
                 <Crown className="h-3 w-3 text-yellow-400" />
                 <span className="text-xs font-medium text-yellow-400 tracking-wide uppercase">
-                  Owner Access
+                  Owner
                 </span>
               </div>
             )}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card-lighter/50 border border-border w-fit backdrop-blur-sm">
-              <span className="text-xs font-medium text-white">
-                {plan.planName}
-              </span>
-            </div>
           </div>
-          <h1 className="text-white text-3xl md:text-4xl font-black leading-tight tracking-tight">
-            Welcome back, {userName}
-          </h1>
-          <p className="text-gray-300 text-base md:text-lg font-light leading-relaxed max-w-lg">
-            Your tenancy at{" "}
-            <span className="text-white font-medium">
-              {property?.address_text || "your property"}
-            </span>{" "}
-            is being monitored. Your latest condition report is safe.
+          <div>
+            <p className="text-text-subtle text-sm mb-1">
+              {property?.address_text || "Your property"}
+            </p>
+            <h1 className="text-white text-2xl md:text-3xl font-bold leading-tight">
+              {heroMessage.headline}
+            </h1>
+          </div>
+          <p className="text-text-subtle text-base max-w-xl">
+            {heroMessage.subtext}
           </p>
-          <div className="flex flex-wrap gap-3 mt-2">
-            <Button asChild className="h-10 px-5 bg-primary text-background-dark font-bold text-sm hover:bg-white">
-              <Link href="/issues/new">
-                <Plus className="h-5 w-5 mr-2" />
-                Log Issue
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="h-10 px-5 bg-white/10 text-white font-medium text-sm border border-white/20 hover:bg-white/20 backdrop-blur-sm"
-            >
-              <Link href="/evidence/upload">
-                <Upload className="h-5 w-5 mr-2" />
-                Upload Evidence
-              </Link>
-            </Button>
-          </div>
         </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard
-          title="Active Issues"
-          value={openIssuesCount || 0}
-          icon={AlertTriangle}
-          iconColor="orange"
-          badge="Needs Action"
-          badgeVariant="warning"
-        />
-        <StatCard
-          title="Next Inspection"
-          value="14 Days"
-          icon={CalendarClock}
-          iconColor="primary"
-          badge="Upcoming"
-          badgeVariant="info"
-        />
-        <StatCard
-          title="Documents Secure"
-          value={evidenceCount || 0}
-          icon={FolderCheck}
-          iconColor="green"
-          badge="Encrypted"
-          badgeVariant="success"
-        />
+      {/* Primary CTA: Recommended Next Step */}
+      {weakestIssue ? (
+        <NextStepCard step={weakestIssue.recommendation} />
+      ) : activeIssues.length === 0 ? (
+        <NoActionNeededCard />
+      ) : null}
+
+      {/* Case Health + Risk Metrics Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Case Health Card - Takes 1 column */}
+        <CaseHealthCard health={overallHealth} />
+
+        {/* Risk Metrics - Takes 2 columns */}
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <RiskMetric
+            label="Unprotected Issues"
+            value={issuesWithNoEvidence.length}
+            subtext={issuesWithNoEvidence.length > 0 ? "need evidence" : "all documented"}
+            icon={FileWarning}
+            status={
+              issuesWithNoEvidence.length === 0
+                ? "good"
+                : issuesWithNoEvidence.length >= 2
+                ? "critical"
+                : "warning"
+            }
+          />
+          <RiskMetric
+            label="High Severity Open"
+            value={highSeverityIssues.length}
+            subtext={highSeverityIssues.length > 0 ? "require attention" : "none"}
+            icon={ShieldAlert}
+            status={
+              highSeverityIssues.length === 0
+                ? "good"
+                : highSeverityIssues.length >= 2
+                ? "critical"
+                : "warning"
+            }
+          />
+          <RiskMetric
+            label="Days Since Last Contact"
+            value={daysSinceLastComms !== null ? daysSinceLastComms : "—"}
+            subtext={daysSinceLastComms !== null ? "days ago" : "no comms logged"}
+            icon={Clock}
+            status={
+              daysSinceLastComms === null
+                ? activeIssues.length > 0
+                  ? "warning"
+                  : "neutral"
+                : daysSinceLastComms > 14
+                ? "warning"
+                : "good"
+            }
+          />
+          <RiskMetric
+            label="Open Issues"
+            value={activeIssues.length}
+            subtext="requiring resolution"
+            icon={AlertTriangle}
+            status={
+              activeIssues.length === 0
+                ? "good"
+                : activeIssues.length >= 3
+                ? "warning"
+                : "neutral"
+            }
+          />
+        </div>
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Active Issues Table */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Issues Requiring Action */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-white text-xl font-bold tracking-tight">
-              Active Tenancy Issues
+            <h2 className="text-white text-lg font-bold">
+              Issues Requiring Action
             </h2>
             <Link
               href="/issues"
-              className="text-primary text-sm font-medium hover:text-white transition-colors"
+              className="text-primary text-sm font-medium hover:text-white transition-colors inline-flex items-center gap-1"
             >
               View All
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
-          <div className="overflow-hidden rounded-xl border border-card-lighter bg-card-dark">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-card-lighter">
-                <tr>
-                  <th className="p-4 text-xs font-semibold text-text-subtle uppercase tracking-wider w-1/3">
-                    Issue Title
-                  </th>
-                  <th className="p-4 text-xs font-semibold text-text-subtle uppercase tracking-wider hidden sm:table-cell">
-                    Reported
-                  </th>
-                  <th className="p-4 text-xs font-semibold text-text-subtle uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="p-4 text-xs font-semibold text-text-subtle uppercase tracking-wider text-right">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-card-lighter">
-                {activeIssues && activeIssues.length > 0 ? (
-                  activeIssues.map((issue: any) => {
-                    const propertiesArr = issue.properties as unknown as Array<{ address_text: string }>;
-                    const properties = propertiesArr?.[0] ?? null;
-                    const status = issue.status as string;
-                    const statusConfig = getStatusConfig(status);
-                    const reportedDate = format(new Date(issue.created_at), "MMM d");
 
-                    return (
-                      <tr
-                        key={issue.id}
-                        className="group hover:bg-card-lighter/50 transition-colors"
-                      >
-                        <td className="p-4">
-                          <div className="flex flex-col">
-                            <span className="text-white font-medium text-sm">
-                              {issue.title}
+          {activeIssues.length > 0 ? (
+            <div className="space-y-3">
+              {activeIssues.slice(0, 5).map((issue) => {
+                const evidenceCount = evidenceCountMap.get(issue.id) || 0;
+                const commsCount = commsCountMap.get(issue.id) || 0;
+                const daysOld = differenceInDays(
+                  new Date(),
+                  new Date(issue.created_at)
+                );
+
+                // Determine issue status label
+                const getIssueStatus = () => {
+                  if (evidenceCount === 0) {
+                    return {
+                      label: "No Evidence",
+                      classes: "bg-red-500/10 text-red-400 border-red-500/20",
+                      dotColor: "bg-red-400",
+                    };
+                  }
+                  if (commsCount === 0) {
+                    return {
+                      label: "No Comms Logged",
+                      classes: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                      dotColor: "bg-amber-400",
+                    };
+                  }
+                  if (evidenceCount >= 3 && commsCount >= 1) {
+                    return {
+                      label: "Well Documented",
+                      classes: "bg-green-500/10 text-green-400 border-green-500/20",
+                      dotColor: "bg-green-400",
+                    };
+                  }
+                  return {
+                    label: "In Progress",
+                    classes: "bg-primary/10 text-primary border-primary/20",
+                    dotColor: "bg-primary",
+                  };
+                };
+
+                const statusConfig = getIssueStatus();
+                const isHighSeverity =
+                  issue.severity === "Urgent" || issue.severity === "High";
+
+                return (
+                  <Link
+                    key={issue.id}
+                    href={`/issues/${issue.id}`}
+                    className="block p-4 rounded-xl bg-card-dark border border-card-lighter hover:border-primary/50 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          {isHighSeverity && (
+                            <span className="text-xs font-medium text-red-400">
+                              {issue.severity}
                             </span>
-                            <span className="text-text-subtle text-xs sm:hidden mt-1">
-                              Reported {reportedDate}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-text-subtle text-sm hidden sm:table-cell">
-                          {reportedDate}
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusConfig.classes}`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`}
-                            />
-                            {statusConfig.label}
+                          )}
+                          <h3 className="text-white font-medium truncate group-hover:text-primary transition-colors">
+                            {issue.title}
+                          </h3>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-text-subtle">
+                          <span>
+                            {daysOld === 0
+                              ? "Today"
+                              : daysOld === 1
+                              ? "Yesterday"
+                              : `${daysOld} days ago`}
                           </span>
-                        </td>
-                        <td className="p-4 text-right">
-                          <Link
-                            href={`/issues/${issue.id}`}
-                            className="text-text-subtle hover:text-primary transition-colors text-sm font-medium"
-                          >
-                            Details
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="p-8 text-center text-text-subtle text-sm">
-                      No active issues
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Recent Activity/Feed */}
-          <div className="mt-4">
-            <h2 className="text-white text-xl font-bold tracking-tight mb-4">
-              Recent Activity
-            </h2>
-            <div className="flex flex-col gap-3">
-              {/* Placeholder activity items - would be replaced with real data */}
-              <div className="flex items-start gap-4 p-4 rounded-xl bg-card-dark border border-card-lighter">
-                <div className="p-2 rounded-lg bg-card-lighter text-text-subtle shrink-0">
-                  <Mail className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col gap-1 w-full">
-                  <div className="flex justify-between items-start">
-                    <p className="text-white text-sm font-medium">
-                      Email sent to Agent
-                    </p>
-                    <span className="text-text-subtle text-xs">2h ago</span>
-                  </div>
-                  <p className="text-text-subtle text-sm">
-                    Re: Maintenance Follow up
-                  </p>
+                          <span>•</span>
+                          <span>
+                            {evidenceCount} evidence
+                          </span>
+                          <span>•</span>
+                          <span>{commsCount} comms</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusConfig.classes}`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`}
+                          />
+                          {statusConfig.label}
+                        </span>
+                        <ArrowRight className="h-4 w-4 text-text-subtle group-hover:text-primary transition-colors" />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-8 rounded-xl bg-card-dark border border-card-lighter text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 rounded-full bg-green-500/10">
+                  <ShieldAlert className="h-6 w-6 text-green-400" />
                 </div>
               </div>
+              <h3 className="text-white font-bold mb-2">No Active Issues</h3>
+              <p className="text-text-subtle text-sm mb-4">
+                You have no unresolved issues. Log a new issue when something comes up.
+              </p>
+              <Button asChild className="bg-primary hover:bg-primary/90 text-background-dark font-bold">
+                <Link href="/issues/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Log New Issue
+                </Link>
+              </Button>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Right Column: Quick Actions & Tools */}
+        {/* Right Column: Quick Actions */}
         <div className="flex flex-col gap-6">
-          {/* Quick Actions Card */}
-          <div className="p-6 rounded-xl bg-card-dark border border-card-lighter">
-            <h3 className="text-white text-lg font-bold mb-4">Quick Tools</h3>
+          <div className="p-5 rounded-xl bg-card-dark border border-card-lighter">
+            <h3 className="text-white text-lg font-bold mb-4">Take Action</h3>
             <div className="grid grid-cols-1 gap-3">
+              <Button
+                asChild
+                variant="ghost"
+                className="flex items-center gap-3 p-3 rounded-lg bg-card-lighter hover:bg-card-lighter/80 border border-transparent hover:border-primary/50 transition-all group justify-start h-auto"
+              >
+                <Link href="/issues/new">
+                  <div className="p-2 rounded-full bg-red-500/10 text-red-400 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                    <Plus className="h-5 w-5" />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-white text-sm font-medium">
+                      Log New Issue
+                    </span>
+                    <span className="text-text-subtle text-xs">
+                      Report a problem immediately
+                    </span>
+                  </div>
+                </Link>
+              </Button>
               <Button
                 asChild
                 variant="ghost"
@@ -324,14 +462,14 @@ export default async function DashboardPage() {
               >
                 <Link href="/evidence/upload">
                   <div className="p-2 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-background-dark transition-colors">
-                    <ImageIcon className="h-5 w-5" />
+                    <Upload className="h-5 w-5" />
                   </div>
                   <div className="flex flex-col items-start">
                     <span className="text-white text-sm font-medium">
-                      Upload Photo
+                      Add Evidence
                     </span>
                     <span className="text-text-subtle text-xs">
-                      Add evidence securely
+                      Upload photos or documents
                     </span>
                   </div>
                 </Link>
@@ -347,10 +485,10 @@ export default async function DashboardPage() {
                   </div>
                   <div className="flex flex-col items-start">
                     <span className="text-white text-sm font-medium">
-                      Email Template
+                      Log Communication
                     </span>
                     <span className="text-text-subtle text-xs">
-                      Contact property manager
+                      Document landlord/agent contact
                     </span>
                   </div>
                 </Link>
@@ -369,7 +507,7 @@ export default async function DashboardPage() {
                       Generate Evidence Pack
                     </span>
                     <span className="text-text-subtle text-xs">
-                      Export for VCAT/Tribunal
+                      Export for tribunal/dispute
                     </span>
                   </div>
                 </Link>
@@ -377,67 +515,40 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* System Insight Panel - Data-driven actionable insights */}
-          <DashboardInsightPanel
-            issues={allIssues || []}
-            evidenceCounts={Object.fromEntries(evidenceCountMap)}
-            commsCounts={Object.fromEntries(commsCountMap)}
-          />
+          {/* Deadline reminder if applicable */}
+          {highSeverityIssues.length > 0 && (
+            <div className="p-5 rounded-xl bg-red-500/10 border border-red-500/30">
+              <div className="flex items-center gap-2 mb-3">
+                <Calendar className="h-4 w-4 text-red-400" />
+                <p className="text-xs font-medium text-red-400 uppercase tracking-wide">
+                  Urgent Attention
+                </p>
+              </div>
+              <p className="text-sm text-text-subtle">
+                You have {highSeverityIssues.length} high-severity issue
+                {highSeverityIssues.length !== 1 ? "s" : ""} that may have
+                statutory repair timeframes. Ensure you document all
+                communications.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="mt-8 border-t border-card-lighter pt-8 pb-4 text-center md:text-left">
+      <footer className="mt-4 border-t border-card-lighter pt-6 pb-4 text-center md:text-left">
         <p className="text-text-subtle text-xs">
-          © {new Date().getFullYear()} Tenant Buddy Australia. All data is
-          encrypted locally.{" "}
+          © {new Date().getFullYear()} Tenant Buddy Australia.{" "}
+          <span className="text-white font-medium">Not legal advice.</span> This
+          tool helps you organise tenancy records.
           <Link href="/privacy" className="text-primary hover:underline ml-2">
-            Privacy Policy
+            Privacy
           </Link>
           <Link href="/terms" className="text-primary hover:underline ml-2">
-            Terms of Service
+            Terms
           </Link>
         </p>
       </footer>
     </div>
   );
 }
-
-function getStatusConfig(status: string) {
-  const configs: Record<string, { label: string; classes: string; dotColor: string }> = {
-    open: {
-      label: "Open",
-      classes: "bg-primary/10 text-primary border-primary/20",
-      dotColor: "bg-primary",
-    },
-    in_progress: {
-      label: "Evidence Collected",
-      classes: "bg-primary/10 text-primary border-primary/20",
-      dotColor: "bg-primary",
-    },
-    waiting: {
-      label: "Waiting for Landlord",
-      classes: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-      dotColor: "bg-orange-400",
-    },
-    resolved: {
-      label: "Repair Scheduled",
-      classes: "bg-green-500/10 text-green-400 border-green-500/20",
-      dotColor: "bg-green-400",
-    },
-    closed: {
-      label: "Closed",
-      classes: "bg-slate-500/10 text-slate-400 border-slate-500/20",
-      dotColor: "bg-slate-400",
-    },
-  };
-
-  return (
-    configs[status] || {
-      label: status.replace("_", " "),
-      classes: "bg-primary/10 text-primary border-primary/20",
-      dotColor: "bg-primary",
-    }
-  );
-}
-
