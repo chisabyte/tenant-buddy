@@ -220,7 +220,7 @@ export interface DocumentationGap {
   issueId: string;
   issueTitle: string;
   description: string;
-  code: "no_comms" | "no_response" | "no_evidence" | "no_images" | "stale_evidence";
+  code: "no_comms" | "no_response" | "no_evidence" | "no_images" | "stale_evidence" | "no_comms_global" | "no_evidence_global";
 }
 
 export function detectIssueGaps(
