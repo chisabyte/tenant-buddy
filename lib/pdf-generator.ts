@@ -162,10 +162,18 @@ const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
 const MARGIN = 40;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-const HEADER_HEIGHT = 25;
+// FIXED: Taller header to accommodate readable logo without overlap
+const HEADER_HEIGHT = 40; // Increased from 25 to fit logo properly
 const FOOTER_HEIGHT = 25;
-const CONTENT_START_Y = MARGIN + HEADER_HEIGHT + 10;
+const CONTENT_START_Y = MARGIN + HEADER_HEIGHT + 10; // Now = 90 (below header)
 const CONTENT_END_Y = PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT - 10;
+
+// Logo dimensions for header (pages 2+)
+// Logo fits within header area with proper sizing
+const HEADER_LOGO_WIDTH = 100;
+const HEADER_LOGO_HEIGHT = 32; // Max height to fit within header
+const HEADER_LOGO_GAP = 16;
+const TITLE_OFFSET_WITH_LOGO = HEADER_LOGO_WIDTH + HEADER_LOGO_GAP; // 116px
 
 // ============================================================================
 // Main Generator Function
@@ -1189,24 +1197,28 @@ function drawPageHeaderFooter(
 
   // Header text (only on page 2+)
   if (pageNum > 1) {
-    // Logo on left - EXPLICIT WIDTH for readability even in headers
+    // Logo on left - FIT within header area (both width and height constrained)
     const logo = getLogoBuffer();
     if (logo) {
       try {
-        // CRITICAL: Even in headers, use explicit width (smaller but still readable - 100px minimum)
-        doc.image(logo, MARGIN, MARGIN + 2, {
-          width: 100,
-          // Height auto-calculated from aspect ratio
+        // FIXED: Constrain logo to fit within header using both width AND height bounds
+        // This prevents logo from extending into content area
+        doc.image(logo, MARGIN, MARGIN + 4, {
+          fit: [HEADER_LOGO_WIDTH, HEADER_LOGO_HEIGHT], // Fit within 100x32 box
+          align: "left",
+          valign: "center",
         });
       } catch (error) {
         // Logo failed, continue without it
       }
     }
 
-    // Position text to the right of logo (110px from left margin)
+    // Position header text to the right of logo
+    // Vertically centered in header area
+    const headerTextY = MARGIN + (HEADER_HEIGHT / 2) - 3;
     doc.fontSize(7).fillColor(COLORS.muted)
-      .text(`Evidence Pack v${VERSION} (${mode})`, MARGIN + 110, MARGIN + 8)
-      .text(truncate(data.property.address_text, 40), PAGE_WIDTH - MARGIN - 150, MARGIN + 8, { width: 150, align: "right" });
+      .text(`Evidence Pack v${VERSION} (${mode})`, MARGIN + TITLE_OFFSET_WITH_LOGO, headerTextY)
+      .text(truncate(data.property.address_text, 40), PAGE_WIDTH - MARGIN - 150, headerTextY, { width: 150, align: "right" });
   }
 
   // Footer line
