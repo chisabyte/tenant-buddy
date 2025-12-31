@@ -40,12 +40,38 @@ let logoBuffer: Buffer | null = null;
 function getLogoBuffer(): Buffer | null {
   if (logoBuffer) return logoBuffer;
   try {
-    // CRITICAL: Path uses capital "Branding" to match actual directory structure
-    const logoPath = join(process.cwd(), "public", "Branding", "logo-mono-dark.png");
-    logoBuffer = readFileSync(logoPath);
-    return logoBuffer;
+    // In Vercel/serverless, process.cwd() points to /var/task/.next/server/
+    // We need to go up to find the project root where public/ folder is
+    // Try multiple path resolutions for different environments
+    const possiblePaths = [
+      // Standard Next.js path (development)
+      join(process.cwd(), "public", "Branding", "logo-mono-dark.png"),
+      // Vercel serverless: .next/server/app/api/... -> go up 4 levels to project root
+      join(process.cwd(), "..", "..", "..", "..", "public", "Branding", "logo-mono-dark.png"),
+      // Alternative: .next/server -> go up 2 levels
+      join(process.cwd(), "..", "..", "public", "Branding", "logo-mono-dark.png"),
+      // Another alternative: go up 3 levels
+      join(process.cwd(), "..", "..", "..", "public", "Branding", "logo-mono-dark.png"),
+    ];
+
+    for (const logoPath of possiblePaths) {
+      try {
+        logoBuffer = readFileSync(logoPath);
+        console.log("[PDF] Logo loaded successfully from:", logoPath);
+        return logoBuffer;
+      } catch (pathError) {
+        // Try next path - don't log each failure to avoid spam
+        continue;
+      }
+    }
+    
+    // If all paths failed, log warning and continue without logo
+    console.warn("[PDF] Could not load logo from filesystem. PDF will be generated without logo.");
+    console.warn("[PDF] Tried paths:", possiblePaths);
+    console.warn("[PDF] Current working directory:", process.cwd());
+    return null;
   } catch (error) {
-    console.warn("[PDF] Could not load logo:", error);
+    console.warn("[PDF] Error loading logo:", error);
     return null;
   }
 }
