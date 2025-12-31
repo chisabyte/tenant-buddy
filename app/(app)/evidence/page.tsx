@@ -4,9 +4,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { EvidenceGridWithFilters } from "@/components/evidence-grid-filterable";
 import Link from "next/link";
-import { Upload, Archive, FolderOpen, History, Cloud, Search, Grid3x3, List, ChevronDown } from "lucide-react";
+import { Upload, Archive, FolderOpen, History, Cloud, Search, Grid3x3, List, ChevronDown, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
+import {
+  checkEnforcement,
+  type EnforcementResult,
+} from "@/lib/enforcement";
+import { EnforcementModal } from "@/components/enforcement-modal";
+import type { CaseHealthStatus } from "@/lib/case-health";
+import type { PlanId } from "@/lib/billing/plans";
 
 interface EvidenceItem {
   id: string;
@@ -18,6 +25,7 @@ interface EvidenceItem {
   uploaded_at: string;
   sha256: string | null;
   file_path: string | null;
+  issue_id: string | null;
 }
 
 export default function EvidencePage() {
@@ -31,6 +39,13 @@ export default function EvidencePage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date_newest");
 
+  // Enforcement state
+  const [enforcement, setEnforcement] = useState<EnforcementResult | null>(null);
+  const [showEnforcementModal, setShowEnforcementModal] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [userPlanId, setUserPlanId] = useState<PlanId>("free");
+  const [caseHealthCache, setCaseHealthCache] = useState<Map<string, { status: CaseHealthStatus; score: number }>>(new Map());
+
   const fetchEvidence = async () => {
     setLoading(true);
     const supabase = createClient();
@@ -40,6 +55,23 @@ export default function EvidencePage() {
       setLoading(false);
       return;
     }
+
+    // Fetch user's subscription for plan
+    const { data: subscription } = await supabase
+      .from("subscriptions")
+      .select("price_id, status")
+      .eq("user_id", user.id)
+      .single();
+
+    let planId: PlanId = "free";
+    if (subscription?.status === "active" || subscription?.status === "trialing") {
+      if (subscription.price_id?.includes("pro")) {
+        planId = "pro";
+      } else if (subscription.price_id?.includes("plus")) {
+        planId = "plus";
+      }
+    }
+    setUserPlanId(planId);
 
     // Fetch evidence items
     const { data: evidenceData, error } = await supabase
@@ -53,7 +85,8 @@ export default function EvidencePage() {
         occurred_at,
         uploaded_at,
         sha256,
-        file_path
+        file_path,
+        issue_id
       `)
       .eq("user_id", user.id)
       .order("uploaded_at", { ascending: false });
@@ -179,11 +212,123 @@ export default function EvidencePage() {
       }
     });
 
+  const getIssueHealth = async (issueId: string): Promise<{ status: CaseHealthStatus; score: number }> => {
+    // Check cache first
+    if (caseHealthCache.has(issueId)) {
+      return caseHealthCache.get(issueId)!;
+    }
+
+    const supabase = createClient();
+
+    // Get evidence count for issue
+    const { count: evCount } = await supabase
+      .from("evidence_items")
+      .select("*", { count: "exact", head: true })
+      .eq("issue_id", issueId);
+
+    // Get comms count
+    const { count: cmCount } = await supabase
+      .from("comms_logs")
+      .select("*", { count: "exact", head: true })
+      .eq("issue_id", issueId);
+
+    const ev = evCount || 0;
+    const cm = cmCount || 0;
+
+    let score = 40;
+    if (ev >= 1) score += 15;
+    if (ev >= 3) score += 15;
+    if (cm >= 1) score += 15;
+    if (cm >= 2) score += 15;
+
+    let status: CaseHealthStatus = "at-risk";
+    if (score >= 80) status = "strong";
+    else if (score >= 60) status = "adequate";
+    else if (score >= 40) status = "weak";
+
+    const health = { status, score };
+    setCaseHealthCache(new Map(caseHealthCache.set(issueId, health)));
+    return health;
+  };
+
   const handleDelete = async (id: string) => {
     const supabase = createClient();
 
-    // Find the item to get file path
+    // Find the item to get file path and issue_id
     const item = evidence.find(e => e.id === id);
+
+    // If item is linked to an issue, check enforcement
+    if (item?.issue_id) {
+      const health = await getIssueHealth(item.issue_id);
+      const enforcementResult = checkEnforcement("delete_evidence", health.status, health.score, userPlanId);
+
+      if (!enforcementResult.allowed) {
+        // Hard blocked
+        setEnforcement(enforcementResult);
+        setPendingDeleteId(id);
+        setShowEnforcementModal(true);
+        return;
+      }
+
+      if (enforcementResult.requiresConfirmation) {
+        // Soft blocked - needs confirmation
+        setEnforcement(enforcementResult);
+        setPendingDeleteId(id);
+        setShowEnforcementModal(true);
+        return;
+      }
+
+      if (enforcementResult.level === "warned") {
+        // Show warning but allow
+        const proceed = window.confirm(
+          `${enforcementResult.message.title}\n\n${enforcementResult.message.description}\n\nDo you want to proceed?`
+        );
+        if (!proceed) return;
+
+        // Log the override
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("override_logs").insert({
+            user_id: user.id,
+            action: "delete_evidence",
+            enforcement_level: "warned",
+            health_status: health.status,
+            health_score: health.score,
+            issue_id: item.issue_id,
+            evidence_id: id,
+            plan_id: userPlanId,
+            plan_mode: userPlanId === "pro" ? "advisor" : "guided",
+          });
+        }
+      }
+    }
+
+    // Proceed with deletion
+    await performDelete(id);
+  };
+
+  const performDelete = async (id: string, reason?: string) => {
+    const supabase = createClient();
+    const item = evidence.find(e => e.id === id);
+
+    // Log override if we had enforcement
+    if (enforcement && item?.issue_id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("override_logs").insert({
+          user_id: user.id,
+          action: "delete_evidence",
+          enforcement_level: enforcement.level,
+          health_status: enforcement.context.healthStatus,
+          health_score: enforcement.context.healthScore,
+          issue_id: item.issue_id,
+          evidence_id: id,
+          reason: reason || null,
+          plan_id: enforcement.context.planId,
+          plan_mode: enforcement.context.planMode,
+        });
+      }
+    }
 
     // Delete from storage if file path exists
     if (item?.file_path) {
@@ -200,6 +345,23 @@ export default function EvidencePage() {
       // Refresh data
       fetchEvidence();
     }
+
+    // Clear enforcement state
+    setEnforcement(null);
+    setPendingDeleteId(null);
+  };
+
+  const handleEnforcementConfirm = async (reason?: string) => {
+    setShowEnforcementModal(false);
+    if (pendingDeleteId) {
+      await performDelete(pendingDeleteId, reason);
+    }
+  };
+
+  const handleEnforcementCancel = () => {
+    setShowEnforcementModal(false);
+    setEnforcement(null);
+    setPendingDeleteId(null);
   };
 
   return (
@@ -362,6 +524,18 @@ export default function EvidencePage() {
             Showing {filteredEvidence.length} of {totalCount} items
           </p>
         </div>
+      )}
+
+      {/* Enforcement Modal */}
+      {enforcement && (
+        <EnforcementModal
+          open={showEnforcementModal}
+          onOpenChange={setShowEnforcementModal}
+          enforcement={enforcement}
+          onConfirm={handleEnforcementConfirm}
+          onCancel={handleEnforcementCancel}
+          showReasonInput={enforcement.level === "soft-blocked"}
+        />
       )}
     </div>
   );

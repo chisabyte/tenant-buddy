@@ -32,6 +32,13 @@ import {
   type PackReadiness,
 } from "@/lib/pack-readiness";
 import type { Severity } from "@/lib/severity";
+import {
+  checkEnforcement,
+  type EnforcementResult,
+} from "@/lib/enforcement";
+import { EnforcementModal, EnforcementBlock } from "@/components/enforcement-modal";
+import type { CaseHealthStatus } from "@/lib/case-health";
+import type { PlanId } from "@/lib/billing/plans";
 
 interface EvidenceItem {
   id: string;
@@ -84,6 +91,11 @@ export default function NewPackPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationAcknowledged, setConfirmationAcknowledged] =
     useState(false);
+
+  // Enforcement state
+  const [enforcement, setEnforcement] = useState<EnforcementResult | null>(null);
+  const [showEnforcementModal, setShowEnforcementModal] = useState(false);
+  const [userPlanId, setUserPlanId] = useState<PlanId>("free");
 
   useEffect(() => {
     fetchData();
@@ -150,6 +162,25 @@ export default function NewPackPage() {
       .eq("user_id", user.id)
       .not("issue_id", "is", null);
 
+    // Fetch user's subscription to determine plan
+    const { data: subscription } = await supabase
+      .from("subscriptions")
+      .select("price_id, status")
+      .eq("user_id", user.id)
+      .single();
+
+    // Determine plan from subscription
+    let planId: PlanId = "free";
+    if (subscription?.status === "active" || subscription?.status === "trialing") {
+      // Check price_id to determine plan (simplified - would use getPlanFromPriceId in real impl)
+      if (subscription.price_id?.includes("pro")) {
+        planId = "pro";
+      } else if (subscription.price_id?.includes("plus")) {
+        planId = "plus";
+      }
+    }
+    setUserPlanId(planId);
+
     setCommsLogs(commsData || []);
     setIssues(issuesData || []);
 
@@ -181,6 +212,19 @@ export default function NewPackPage() {
   const packReadiness = useMemo(() => {
     return calculatePackReadiness(issues, selectedIssues, commsLogs);
   }, [issues, selectedIssues, commsLogs]);
+
+  // Calculate enforcement based on pack readiness
+  const packEnforcement = useMemo(() => {
+    // Map pack readiness status to case health status
+    const statusMap: Record<PackReadiness["status"], CaseHealthStatus> = {
+      strong: "strong",
+      moderate: "adequate",
+      weak: "weak",
+      "high-risk": "at-risk",
+    };
+    const healthStatus = statusMap[packReadiness.status];
+    return checkEnforcement("generate_pack", healthStatus, packReadiness.score, userPlanId);
+  }, [packReadiness, userPlanId]);
 
   const toggleIssueSelection = (issueId: string) => {
     const newSelected = new Set(selectedIssues);
@@ -264,14 +308,64 @@ export default function NewPackPage() {
       return;
     }
 
-    // If confirmation is required, show the modal
-    if (packReadiness.requiresConfirmation) {
+    // Check enforcement level
+    if (!packEnforcement.allowed) {
+      // Hard-blocked - show enforcement modal with block message
+      setEnforcement(packEnforcement);
+      setShowEnforcementModal(true);
+      return;
+    }
+
+    if (packEnforcement.requiresConfirmation) {
+      // Soft-blocked - show enforcement confirmation modal
+      setEnforcement(packEnforcement);
+      setShowEnforcementModal(true);
+      return;
+    }
+
+    if (packEnforcement.level === "warned") {
+      // Warned - still show original confirmation with readiness info
       setShowConfirmation(true);
       setConfirmationAcknowledged(false);
-    } else {
-      // Otherwise, generate directly
-      handleGeneratePack();
+      return;
     }
+
+    // Allowed - generate directly
+    handleGeneratePack();
+  };
+
+  const handleEnforcementConfirm = async (reason?: string) => {
+    setShowEnforcementModal(false);
+
+    // Log the override
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user && enforcement) {
+        // Log override to database
+        await supabase.from("override_logs").insert({
+          user_id: user.id,
+          action: "generate_pack",
+          enforcement_level: enforcement.level,
+          health_status: enforcement.context.healthStatus,
+          health_score: enforcement.context.healthScore,
+          reason: reason || null,
+          plan_id: enforcement.context.planId,
+          plan_mode: enforcement.context.planMode,
+        });
+      }
+    } catch (err) {
+      console.error("Error logging override:", err);
+    }
+
+    // Proceed with generation
+    handleGeneratePack();
+  };
+
+  const handleEnforcementCancel = () => {
+    setShowEnforcementModal(false);
+    setEnforcement(null);
   };
 
   const handleGeneratePack = async () => {
@@ -870,15 +964,49 @@ export default function NewPackPage() {
                   </div>
                 )}
 
+                {/* Hard-blocked warning */}
+                {!packEnforcement.allowed && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
+                    <div className="flex items-start gap-2">
+                      <ShieldAlert className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-red-400 text-sm font-medium">
+                          Generation Blocked
+                        </p>
+                        <p className="text-text-subtle text-xs mt-1">
+                          Your case health is too weak to generate a pack safely.
+                          Add evidence and communications first.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   onClick={handleGenerateClick}
                   disabled={generating || selectedIssues.size === 0}
-                  className="w-full py-4 bg-primary hover:bg-primary/90 text-background-dark font-bold text-lg shadow-lg shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`w-full py-4 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                    !packEnforcement.allowed
+                      ? "bg-red-600 hover:bg-red-500 text-white shadow-red-500/30"
+                      : packEnforcement.requiresConfirmation
+                      ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-500/30"
+                      : "bg-primary hover:bg-primary/90 text-background-dark shadow-primary/30"
+                  }`}
                 >
                   {generating ? (
                     <>
                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                       Generating...
+                    </>
+                  ) : !packEnforcement.allowed ? (
+                    <>
+                      <ShieldAlert className="h-5 w-5 mr-2" />
+                      Blocked - Strengthen Case
+                    </>
+                  ) : packEnforcement.requiresConfirmation ? (
+                    <>
+                      <AlertTriangle className="h-5 w-5 mr-2" />
+                      Generate with Confirmation
                     </>
                   ) : (
                     <>
@@ -892,6 +1020,19 @@ export default function NewPackPage() {
                     Select at least one issue to generate a pack
                   </p>
                 )}
+
+                {/* Plan mode indicator */}
+                <div className="mt-3 text-center">
+                  <span className="text-xs text-text-subtle">
+                    Mode:{" "}
+                    <span className="text-white font-medium capitalize">
+                      {packEnforcement.context.planMode}
+                    </span>
+                    {packEnforcement.context.planMode === "guided" && (
+                      <span className="text-text-subtle"> - Protective guardrails active</span>
+                    )}
+                  </span>
+                </div>
                 <p className="mt-4 text-xs text-text-subtle text-center">
                   Formatted for tribunal/dispute resolution.{" "}
                   <span className="text-white font-medium">
@@ -1188,6 +1329,18 @@ export default function NewPackPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Enforcement Modal */}
+      {enforcement && (
+        <EnforcementModal
+          open={showEnforcementModal}
+          onOpenChange={setShowEnforcementModal}
+          enforcement={enforcement}
+          onConfirm={handleEnforcementConfirm}
+          onCancel={handleEnforcementCancel}
+          showReasonInput={enforcement.level === "soft-blocked"}
+        />
       )}
     </div>
   );

@@ -4,16 +4,24 @@
  * Calculates how strong a tenant's position would be if a dispute escalates.
  * Score ranges from 0-100, with clear status labels for user guidance.
  *
- * Factors considered:
- * - Issue logged with description
- * - Evidence uploaded and quantity
- * - Communication documented
- * - Recency of activity
- * - Severity classification set
- * - Response timeline tracked
+ * Scoring Weights (aligned with enforcement system):
+ * - Evidence: 30% - Evidence quality and quantity
+ * - Communications: 25% - Communication trail documentation
+ * - Severity: 15% - Proper severity classification
+ * - Documentation: 15% - Issue description quality
+ * - Recency: 15% - Recent activity
+ *
+ * Status Bands:
+ * - Strong: 80-100% - Case is well-documented
+ * - Adequate: 60-79% - Case has minor gaps
+ * - Weak: 40-59% - Case has significant gaps
+ * - At-Risk: 0-39% - Case is unprotected
+ *
+ * See lib/enforcement.ts for how these bands affect allowed actions.
  */
 
 import type { Severity } from "./severity";
+import { SCORING_WEIGHTS, SCORE_THRESHOLDS } from "./enforcement";
 
 export type CaseHealthStatus = "strong" | "adequate" | "weak" | "at-risk";
 
@@ -383,21 +391,22 @@ function getHealthStatus(score: number): {
   statusLabel: string;
   statusDescription: string;
 } {
-  if (score >= 80) {
+  // Use thresholds from enforcement system for consistency
+  if (score >= SCORE_THRESHOLDS.strong) {
     return {
       status: "strong",
       statusLabel: "Strong",
       statusDescription: "Your documentation is solid. Continue maintaining records.",
     };
   }
-  if (score >= 60) {
+  if (score >= SCORE_THRESHOLDS.adequate) {
     return {
       status: "adequate",
       statusLabel: "Adequate",
       statusDescription: "Your case has some gaps. Address the recommendations below.",
     };
   }
-  if (score >= 40) {
+  if (score >= SCORE_THRESHOLDS.weak) {
     return {
       status: "weak",
       statusLabel: "Weak",
