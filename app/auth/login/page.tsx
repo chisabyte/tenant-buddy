@@ -51,15 +51,32 @@ function LoginForm() {
       }
 
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+
+      // TEMPORARY DEBUG: Log Supabase URL being used
+      console.log('[DEBUG] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      console.log('[DEBUG] Login attempt for email:', result.data.email);
+
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: result.data.email,
         password: result.data.password,
       });
 
       if (signInError) {
+        // TEMPORARY DEBUG: Log full error details
+        console.error('[DEBUG] Sign-in error:', {
+          message: signInError.message,
+          status: signInError.status,
+          name: signInError.name,
+          code: (signInError as any).code,
+          details: signInError,
+        });
+
         // Don't expose whether email exists
         throw new Error("Invalid email or password");
       }
+
+      // TEMPORARY DEBUG: Log successful sign-in
+      console.log('[DEBUG] Sign-in successful, user:', signInData?.user?.email);
 
       // Force a refresh to update server-side session
       router.refresh();
