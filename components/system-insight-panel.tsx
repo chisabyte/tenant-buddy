@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { AlertTriangle, Clock, FileWarning, ArrowRight } from "lucide-react";
+import { AlertTriangle, Clock, FileWarning, ArrowRight, CheckCircle } from "lucide-react";
 import type { Severity } from "@/lib/severity";
 
 interface Issue {
@@ -22,7 +22,8 @@ interface InsightData {
 
 interface Insight {
   id: string;
-  type: "warning" | "info" | "urgent";
+  type: "warning" | "info" | "urgent" | "success";
+  title: string;
   message: string;
   cta?: {
     label: string;
@@ -32,166 +33,147 @@ interface Insight {
 }
 
 /**
- * Generates actionable insights from user data.
- * Returns insights in priority order.
- * Returns empty array if nothing important to show.
+ * Generates individual actionable insights for each issue.
+ * Each issue gets its own insight based on what action is needed.
  */
 function generateInsights(data: InsightData): Insight[] {
   const insights: Insight[] = [];
   const { issues, evidenceCountMap, commsCountMap } = data;
+  const now = new Date();
 
   // Filter to active issues only
   const activeIssues = issues.filter(
     (i) => i.status === "open" || i.status === "in_progress"
   );
 
-  // 1. HIGH/URGENT severity issues without evidence (PRIORITY 1)
-  const highSeverityNoEvidence = activeIssues.filter((issue) => {
-    const severity = issue.severity;
+  // Generate insights for each active issue
+  for (const issue of activeIssues) {
     const evidenceCount = evidenceCountMap.get(issue.id) || 0;
-    return (severity === "Urgent" || severity === "High") && evidenceCount === 0;
-  });
+    const commsCount = commsCountMap.get(issue.id) || 0;
+    const createdDate = new Date(issue.created_at);
+    const updatedDate = new Date(issue.updated_at);
+    const daysOld = Math.floor(
+      (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const daysSinceUpdate = Math.floor(
+      (now.getTime() - updatedDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const isHighSeverity = issue.severity === "Urgent" || issue.severity === "High";
 
-  if (highSeverityNoEvidence.length > 0) {
-    if (highSeverityNoEvidence.length === 1) {
-      const issue = highSeverityNoEvidence[0];
+    // Priority 1: High severity with no evidence - URGENT
+    if (isHighSeverity && evidenceCount === 0) {
       insights.push({
-        id: `high-no-evidence-${issue.id}`,
+        id: `urgent-no-evidence-${issue.id}`,
         type: "urgent",
-        message: `"${truncate(issue.title, 30)}" has no evidence attached.`,
+        title: truncate(issue.title, 35),
+        message: `${issue.severity} severity issue needs evidence to strengthen your case.`,
         cta: {
           label: "Upload evidence",
           href: `/evidence/upload?issueId=${issue.id}`,
         },
         priority: 1,
       });
-    } else {
+      continue; // Only one insight per issue
+    }
+
+    // Priority 2: Waiting on agent > 3 days
+    if (issue.status === "in_progress" && daysSinceUpdate >= 3) {
       insights.push({
-        id: "high-no-evidence-multiple",
-        type: "urgent",
-        message: `${highSeverityNoEvidence.length} high-severity issues have no evidence attached.`,
+        id: `stale-${issue.id}`,
+        type: "warning",
+        title: truncate(issue.title, 35),
+        message: `No response from agent in ${daysSinceUpdate} days. Consider sending a follow-up.`,
         cta: {
-          label: "View issues",
-          href: "/issues",
+          label: "Send follow-up",
+          href: `/comms/new?issueId=${issue.id}`,
         },
-        priority: 1,
+        priority: 2,
+      });
+      continue;
+    }
+
+    // Priority 3: Approaching repair deadline (high severity > 5 days, or any > 12 days)
+    if ((isHighSeverity && daysOld >= 5) || (daysOld >= 12 && daysOld < 14)) {
+      insights.push({
+        id: `deadline-${issue.id}`,
+        type: "warning",
+        title: truncate(issue.title, 35),
+        message: `Open for ${daysOld} days. May breach statutory repair timeframes.`,
+        cta: {
+          label: "View issue",
+          href: `/issues/${issue.id}`,
+        },
+        priority: 3,
+      });
+      continue;
+    }
+
+    // Priority 4: Has evidence but no communications logged
+    if (evidenceCount > 0 && commsCount === 0) {
+      insights.push({
+        id: `no-comms-${issue.id}`,
+        type: "info",
+        title: truncate(issue.title, 35),
+        message: `${evidenceCount} evidence item${evidenceCount > 1 ? "s" : ""} uploaded. Log your communication with the agent.`,
+        cta: {
+          label: "Log communication",
+          href: `/comms/new?issueId=${issue.id}`,
+        },
+        priority: 4,
+      });
+      continue;
+    }
+
+    // Priority 5: Ready for evidence pack (3+ evidence, 1+ comms)
+    if (evidenceCount >= 3 && commsCount >= 1) {
+      insights.push({
+        id: `ready-pack-${issue.id}`,
+        type: "success",
+        title: truncate(issue.title, 35),
+        message: `Well documented with ${evidenceCount} evidence items and ${commsCount} communication${commsCount > 1 ? "s" : ""}. Ready for tribunal pack.`,
+        cta: {
+          label: "Generate pack",
+          href: `/packs/new?issueId=${issue.id}`,
+        },
+        priority: 5,
+      });
+      continue;
+    }
+
+    // Priority 6: New issue with no evidence
+    if (evidenceCount === 0) {
+      insights.push({
+        id: `needs-evidence-${issue.id}`,
+        type: "info",
+        title: truncate(issue.title, 35),
+        message: `Logged ${daysOld === 0 ? "today" : daysOld === 1 ? "yesterday" : `${daysOld} days ago`}. Add photos or documents as evidence.`,
+        cta: {
+          label: "Upload evidence",
+          href: `/evidence/upload?issueId=${issue.id}`,
+        },
+        priority: 6,
+      });
+      continue;
+    }
+
+    // Priority 7: General status update for issues with some progress
+    if (evidenceCount > 0) {
+      insights.push({
+        id: `status-${issue.id}`,
+        type: "info",
+        title: truncate(issue.title, 35),
+        message: `${evidenceCount} evidence item${evidenceCount > 1 ? "s" : ""}, ${commsCount} communication${commsCount !== 1 ? "s" : ""} logged.`,
+        cta: {
+          label: "View details",
+          href: `/issues/${issue.id}`,
+        },
+        priority: 7,
       });
     }
   }
 
-  // 2. Issues waiting on agent response beyond threshold (PRIORITY 2)
-  const now = new Date();
-  const waitingOnAgent = activeIssues.filter((issue) => {
-    if (issue.status !== "in_progress") return false;
-    const updatedDate = new Date(issue.updated_at);
-    const daysSinceUpdate = Math.floor(
-      (now.getTime() - updatedDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return daysSinceUpdate >= 3;
-  });
-
-  if (waitingOnAgent.length > 0) {
-    // Sort by longest wait
-    waitingOnAgent.sort(
-      (a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
-    );
-    const oldest = waitingOnAgent[0];
-    const daysSinceUpdate = Math.floor(
-      (now.getTime() - new Date(oldest.updated_at).getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    insights.push({
-      id: `waiting-agent-${oldest.id}`,
-      type: "warning",
-      message: `"${truncate(oldest.title, 25)}" — no follow-up sent in ${daysSinceUpdate} days.`,
-      cta: {
-        label: "Send follow-up",
-        href: `/comms/new?issueId=${oldest.id}`,
-      },
-      priority: 2,
-    });
-  }
-
-  // 3. Issues approaching repair timeframes (PRIORITY 3)
-  // For Australian tenancy, urgent repairs typically need response within 24-48 hours
-  // Non-urgent repairs within 14 days
-  const approachingDeadline = activeIssues.filter((issue) => {
-    const createdDate = new Date(issue.created_at);
-    const daysOld = Math.floor(
-      (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    // Urgent/High issues older than 5 days with no resolution
-    if ((issue.severity === "Urgent" || issue.severity === "High") && daysOld >= 5) {
-      return true;
-    }
-
-    // Any issue older than 12 days approaching 14-day threshold
-    if (daysOld >= 12 && daysOld < 14) {
-      return true;
-    }
-
-    return false;
-  });
-
-  if (approachingDeadline.length > 0) {
-    const issue = approachingDeadline[0];
-    insights.push({
-      id: `deadline-${issue.id}`,
-      type: "warning",
-      message: `"${truncate(issue.title, 30)}" may breach repair timeframes soon.`,
-      cta: {
-        label: "View issue",
-        href: `/issues/${issue.id}`,
-      },
-      priority: 3,
-    });
-  }
-
-  // 4. Suggested next action - issues with evidence but no comms (PRIORITY 4)
-  const needsFollowUp = activeIssues.filter((issue) => {
-    const evidenceCount = evidenceCountMap.get(issue.id) || 0;
-    const commsCount = commsCountMap.get(issue.id) || 0;
-    return evidenceCount > 0 && commsCount === 0;
-  });
-
-  if (needsFollowUp.length > 0 && insights.length < 2) {
-    const issue = needsFollowUp[0];
-    insights.push({
-      id: `needs-followup-${issue.id}`,
-      type: "info",
-      message: `"${truncate(issue.title, 30)}" has evidence but no logged communication.`,
-      cta: {
-        label: "Log communication",
-        href: `/comms/new?issueId=${issue.id}`,
-      },
-      priority: 4,
-    });
-  }
-
-  // 5. Ready for evidence pack (PRIORITY 5)
-  const readyForPack = activeIssues.filter((issue) => {
-    const evidenceCount = evidenceCountMap.get(issue.id) || 0;
-    const commsCount = commsCountMap.get(issue.id) || 0;
-    return evidenceCount >= 3 && commsCount >= 1;
-  });
-
-  if (readyForPack.length > 0 && insights.length < 2) {
-    const issue = readyForPack[0];
-    insights.push({
-      id: `ready-pack-${issue.id}`,
-      type: "info",
-      message: `"${truncate(issue.title, 30)}" is ready for an evidence pack.`,
-      cta: {
-        label: "Generate pack",
-        href: `/packs/new?issueId=${issue.id}`,
-      },
-      priority: 5,
-    });
-  }
-
-  // Sort by priority and return top insights
-  return insights.sort((a, b) => a.priority - b.priority).slice(0, 3);
+  // Sort by priority and return all insights
+  return insights.sort((a, b) => a.priority - b.priority);
 }
 
 function truncate(str: string, maxLength: number): string {
@@ -230,9 +212,14 @@ export function SystemInsightPanel({
         setCurrentIndex((prev) => (prev + 1) % insights.length);
         setIsVisible(true);
       }, 300);
-    }, 8000); // 8 seconds per insight
+    }, 6000); // 6 seconds per insight
 
     return () => clearInterval(interval);
+  }, [insights.length]);
+
+  // Reset index if insights change
+  useEffect(() => {
+    setCurrentIndex(0);
   }, [insights.length]);
 
   // Don't render if no insights
@@ -240,72 +227,96 @@ export function SystemInsightPanel({
     return null;
   }
 
-  const currentInsight = insights[currentIndex];
+  const currentInsight = insights[currentIndex] || insights[0];
 
   const getIcon = () => {
     switch (currentInsight.type) {
       case "urgent":
-        return <AlertTriangle className="h-4 w-4 text-red-400" />;
+        return <AlertTriangle className="h-5 w-5 text-red-400" />;
       case "warning":
-        return <Clock className="h-4 w-4 text-amber-400" />;
+        return <Clock className="h-5 w-5 text-amber-400" />;
+      case "success":
+        return <CheckCircle className="h-5 w-5 text-green-400" />;
       case "info":
-        return <FileWarning className="h-4 w-4 text-primary" />;
       default:
-        return <FileWarning className="h-4 w-4 text-primary" />;
+        return <FileWarning className="h-5 w-5 text-primary" />;
+    }
+  };
+
+  const getBorderColor = () => {
+    switch (currentInsight.type) {
+      case "urgent":
+        return "border-red-500/30";
+      case "warning":
+        return "border-amber-500/30";
+      case "success":
+        return "border-green-500/30";
+      case "info":
+      default:
+        return "border-card-lighter";
     }
   };
 
   return (
-    <div className="rounded-xl bg-card-dark border border-card-lighter p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div
-            className={`mt-0.5 shrink-0 transition-opacity duration-300 ${
-              isVisible ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            {getIcon()}
-          </div>
+    <div className={`rounded-xl bg-card-dark border ${getBorderColor()} p-5`}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-medium text-text-subtle uppercase tracking-wide">
+          System Insight
+        </p>
+        {insights.length > 1 && (
+          <span className="text-xs text-text-subtle">
+            {currentIndex + 1} of {insights.length}
+          </span>
+        )}
+      </div>
+
+      {/* Content */}
+      <div
+        className={`transition-opacity duration-300 ${
+          isVisible ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <div className="flex items-start gap-3 mb-3">
+          <div className="mt-0.5 shrink-0">{getIcon()}</div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-text-subtle uppercase tracking-wide mb-1">
-              System Insight
+            <p className="text-sm font-semibold text-white mb-1">
+              {currentInsight.title}
             </p>
-            <p
-              className={`text-sm text-white transition-opacity duration-300 ${
-                isVisible ? "opacity-100" : "opacity-0"
-              }`}
-            >
+            <p className="text-sm text-text-subtle leading-relaxed">
               {currentInsight.message}
             </p>
           </div>
         </div>
 
-        <div
-          className={`transition-opacity duration-300 ${
-            isVisible ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          {currentInsight.cta && (
-            <Link
-              href={currentInsight.cta.href}
-              className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-            >
-              {currentInsight.cta.label}
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          )}
-        </div>
+        {currentInsight.cta && (
+          <Link
+            href={currentInsight.cta.href}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-2"
+          >
+            {currentInsight.cta.label}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        )}
       </div>
 
       {/* Progress indicator for multiple insights */}
       {insights.length > 1 && (
-        <div className="flex gap-1 mt-3 justify-center">
+        <div className="flex gap-1.5 mt-4 justify-center">
           {insights.map((_, index) => (
-            <div
+            <button
               key={index}
-              className={`h-1 w-6 rounded-full transition-colors ${
-                index === currentIndex ? "bg-primary" : "bg-card-lighter"
+              onClick={() => {
+                setIsVisible(false);
+                setTimeout(() => {
+                  setCurrentIndex(index);
+                  setIsVisible(true);
+                }, 150);
+              }}
+              className={`h-1.5 w-8 rounded-full transition-colors ${
+                index === currentIndex ? "bg-primary" : "bg-card-lighter hover:bg-card-lighter/80"
               }`}
+              aria-label={`Go to insight ${index + 1}`}
             />
           ))}
         </div>
