@@ -257,20 +257,31 @@ This ensures legal defensibility of severity classifications.';
 -- ===========================================
 -- 5. HARDEN STORAGE SECURITY
 -- ===========================================
--- Enable RLS on storage.objects (required for policies to work)
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
--- Drop the UPDATE policy on evidence bucket to prevent silent file replacement
--- This ensures evidence files cannot be overwritten once uploaded
-DROP POLICY IF EXISTS "Users can update own evidence files" ON storage.objects;
-
--- Recreate UPDATE policy ONLY for receipts bucket (expenses can be corrected)
--- Evidence bucket intentionally has NO UPDATE policy
-
--- Note: Bucket privacy settings must be configured in Supabase Dashboard:
--- 1. Go to Storage > evidence bucket > Settings
--- 2. Ensure "Public" is OFF (bucket is private)
--- 3. Repeat for "receipts" bucket
+-- IMPORTANT: Storage security must be configured in Supabase Dashboard
+-- The storage.objects table is owned by Supabase and cannot be modified via SQL editor.
+--
+-- MANUAL STEPS REQUIRED in Supabase Dashboard:
+--
+-- Step 1: Verify RLS is enabled on storage.objects
+--   - Go to Database > Tables > storage schema > objects
+--   - Ensure RLS is enabled (should be by default)
+--
+-- Step 2: Remove UPDATE policy on evidence bucket (prevents silent file replacement)
+--   - Go to Storage > Policies
+--   - Find "Users can update own evidence files" policy
+--   - DELETE this policy (evidence should be immutable)
+--
+-- Step 3: Verify buckets are private
+--   - Go to Storage > evidence bucket > Settings
+--   - Ensure "Public" toggle is OFF
+--   - Repeat for "receipts" bucket
+--
+-- Step 4: Verify remaining policies exist:
+--   - evidence bucket: SELECT, INSERT, DELETE (no UPDATE)
+--   - receipts bucket: SELECT, INSERT, UPDATE, DELETE
+--
+-- The existing policies from 003_storage_rls.sql are correct, just remove
+-- the UPDATE policy for evidence to ensure evidence integrity.
 
 -- ===========================================
 -- 6. ADD AUDIT COMMENTS
