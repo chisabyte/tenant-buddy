@@ -1203,10 +1203,9 @@ function drawPageHeaderFooter(
       try {
         // FIXED: Constrain logo to fit within header using both width AND height bounds
         // This prevents logo from extending into content area
+        // Note: align defaults to left, valign defaults to top
         doc.image(logo, MARGIN, MARGIN + 4, {
           fit: [HEADER_LOGO_WIDTH, HEADER_LOGO_HEIGHT], // Fit within 100x32 box
-          align: "left",
-          valign: "center",
         });
       } catch (error) {
         // Logo failed, continue without it
