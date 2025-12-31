@@ -21,14 +21,22 @@ interface Property {
   address_text: string;
 }
 
+interface Issue {
+  id: string;
+  title: string;
+  property_id: string;
+}
+
 function UploadEvidenceForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const issueId = searchParams?.get("issueId") ?? null;
+  const issueIdFromUrl = searchParams?.get("issueId") ?? null;
 
   const [properties, setProperties] = useState<Property[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
   const [propertyId, setPropertyId] = useState("");
-  const [selectedIssueId, setSelectedIssueId] = useState(issueId || "");
+  const [selectedIssueId, setSelectedIssueId] = useState(issueIdFromUrl || "");
+  const [propertyLockedByIssue, setPropertyLockedByIssue] = useState(false);
   const [type, setType] = useState<EvidenceType>("photo");
   const [category, setCategory] = useState<string>("");
   const [room, setRoom] = useState("");
@@ -53,14 +61,34 @@ function UploadEvidenceForm() {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
+        // Fetch properties
         const { data: props } = await supabase
           .from("properties")
           .select("id, address_text")
           .eq("user_id", user.id);
         if (props) {
           setProperties(props);
-          if (props.length === 1) {
+          if (props.length === 1 && !issueIdFromUrl) {
             setPropertyId(props[0].id);
+          }
+        }
+
+        // Fetch all issues for the user (to link evidence to issues)
+        const { data: issuesData } = await supabase
+          .from("issues")
+          .select("id, title, property_id")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        if (issuesData) {
+          setIssues(issuesData);
+
+          // If we have an issueId from URL, auto-set the property from the issue
+          if (issueIdFromUrl) {
+            const linkedIssue = issuesData.find((i) => i.id === issueIdFromUrl);
+            if (linkedIssue) {
+              setPropertyId(linkedIssue.property_id);
+              setPropertyLockedByIssue(true);
+            }
           }
         }
 
@@ -79,7 +107,26 @@ function UploadEvidenceForm() {
       }
     }
     fetchData();
-  }, []);
+  }, [issueIdFromUrl]);
+
+  // When issue selection changes, update propertyId to match the issue
+  useEffect(() => {
+    if (selectedIssueId) {
+      const linkedIssue = issues.find((i) => i.id === selectedIssueId);
+      if (linkedIssue) {
+        setPropertyId(linkedIssue.property_id);
+        setPropertyLockedByIssue(true);
+      }
+    } else {
+      // If no issue selected, allow property selection again
+      setPropertyLockedByIssue(false);
+    }
+  }, [selectedIssueId, issues]);
+
+  // Filter issues by selected property (only show issues for current property)
+  const filteredIssues = propertyId
+    ? issues.filter((i) => i.property_id === propertyId)
+    : issues;
 
   useEffect(() => {
     async function validate() {
@@ -331,10 +378,16 @@ function UploadEvidenceForm() {
             <select
               id="property"
               value={propertyId}
-              onChange={(e) => setPropertyId(e.target.value)}
+              onChange={(e) => {
+                setPropertyId(e.target.value);
+                // Clear issue selection if property changes
+                if (!propertyLockedByIssue) {
+                  setSelectedIssueId("");
+                }
+              }}
               className="flex h-11 w-full rounded-lg border border-card-lighter bg-background-dark px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
               required
-              disabled={loading}
+              disabled={loading || propertyLockedByIssue}
             >
               <option value="">Select a property</option>
               {properties.map((prop) => (
@@ -343,6 +396,39 @@ function UploadEvidenceForm() {
                 </option>
               ))}
             </select>
+            {propertyLockedByIssue && (
+              <p className="text-xs text-amber-400">
+                Property is locked to match the linked issue. Clear the issue to change property.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="issue" className="text-white">
+              Link to Issue (Optional)
+            </Label>
+            <select
+              id="issue"
+              value={selectedIssueId}
+              onChange={(e) => setSelectedIssueId(e.target.value)}
+              className="flex h-11 w-full rounded-lg border border-card-lighter bg-background-dark px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={loading}
+            >
+              <option value="">No linked issue</option>
+              {filteredIssues.map((issue) => (
+                <option key={issue.id} value={issue.id}>
+                  {issue.title}
+                </option>
+              ))}
+            </select>
+            {filteredIssues.length === 0 && propertyId && (
+              <p className="text-xs text-text-subtle">
+                No issues found for this property.{" "}
+                <Link href="/issues/new" className="text-primary hover:underline">
+                  Create one first
+                </Link>
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

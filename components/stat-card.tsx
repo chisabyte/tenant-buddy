@@ -44,7 +44,7 @@ export function StatCard({
         {badge && (
           <span
             className={cn(
-              "text-xs font-medium text-text-subtle bg-card-lighter px-2 py-1 rounded",
+              "text-xs font-medium text-white/90 bg-card-lighter px-2 py-1 rounded",
               badgeVariantClasses[badgeVariant]
             )}
           >
@@ -52,13 +52,13 @@ export function StatCard({
           </span>
         )}
       </div>
-      <p className="text-text-subtle text-sm font-medium">{title}</p>
+      <p className="text-white/80 text-sm font-medium">{title}</p>
       <div className="flex items-baseline gap-2">
         <p className="text-white text-3xl font-bold mt-1 group-hover:text-primary transition-colors">
           {value}
         </p>
         {subtitle && (
-          <span className="text-xs text-text-subtle">{subtitle}</span>
+          <span className="text-xs text-white/70">{subtitle}</span>
         )}
       </div>
     </div>

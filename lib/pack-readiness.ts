@@ -193,8 +193,29 @@ export function calculatePackReadiness(
     });
   }
 
+  // Check for included high-severity issues with no comms
+  const highSeverityNoComms = selectedIssues.filter(
+    (i) =>
+      (i.status === "open" || i.status === "in_progress") &&
+      (i.severity === "Urgent" || i.severity === "High") &&
+      (commsCountMap.get(i.id) || 0) === 0
+  );
+
+  highSeverityNoComms.forEach((issue) => {
+    if (!warnings.find((w) => w.issueId === issue.id)) {
+      warnings.push({
+        type: "critical",
+        title: "High-Severity Issue Has No Communications",
+        message: `"${truncate(issue.title, 40)}" is ${issue.severity} severity but has no logged communications. This significantly weakens your documentation.`,
+        issueId: issue.id,
+        issueTitle: issue.title,
+      });
+    }
+  });
+
   // Calculate score
   let score = 100;
+  let maxScoreCap = 100; // Track maximum allowed score based on hard caps
 
   // Deduct for coverage gaps
   if (coverage.totalOpenIssues > 0) {
@@ -214,11 +235,39 @@ export function calculatePackReadiness(
   // Deduct for included issues without communications
   score -= includedNoComms.length * 5; // -5 per issue without comms
 
+  // ========================================================================
+  // STRICT CAPS (Non-negotiable) - "Brutally Honest" Readiness
+  // ========================================================================
+
+  // CAP 1: Any excluded High/Urgent issue → max 40%
+  if (excludedHighSeverity.length > 0) {
+    maxScoreCap = Math.min(maxScoreCap, 40);
+  }
+
+  // CAP 2: Any High/Urgent issue with 0 comms → max 60%
+  if (highSeverityNoComms.length > 0) {
+    maxScoreCap = Math.min(maxScoreCap, 60);
+  }
+
+  // CAP 3: Any included issue with 0 evidence → max 70%
+  if (includedNoEvidence.length > 0) {
+    maxScoreCap = Math.min(maxScoreCap, 70);
+  }
+
+  // Apply the cap
+  score = Math.min(score, maxScoreCap);
+
   // Ensure score is within bounds
   score = Math.max(0, Math.min(100, score));
 
-  // Determine status
-  const { status, statusLabel, statusDescription } = getReadinessStatus(score, warnings);
+  // Determine status (with stricter caps applied)
+  const { status, statusLabel, statusDescription } = getReadinessStatus(
+    score,
+    warnings,
+    maxScoreCap,
+    excludedHighSeverity.length,
+    highSeverityNoComms.length
+  );
 
   // Determine if confirmation is required
   const requiresConfirmation =
@@ -240,7 +289,10 @@ export function calculatePackReadiness(
 
 function getReadinessStatus(
   score: number,
-  warnings: PackWarning[]
+  warnings: PackWarning[],
+  maxScoreCap: number = 100,
+  excludedHighSeverityCount: number = 0,
+  highSeverityNoCommsCount: number = 0
 ): {
   status: PackReadinessStatus;
   statusLabel: string;
@@ -248,7 +300,13 @@ function getReadinessStatus(
 } {
   const criticalWarnings = warnings.filter((w) => w.type === "critical");
 
-  if (score >= 80 && criticalWarnings.length === 0) {
+  // STRICT RULE: Cannot be "Strong" if any cap was applied below 80
+  const canBeStrong = maxScoreCap >= 80 && criticalWarnings.length === 0;
+
+  // STRICT RULE: Cannot be "Strong" if High/Urgent issues have no comms
+  const blockedFromStrong = highSeverityNoCommsCount > 0 || excludedHighSeverityCount > 0;
+
+  if (score >= 80 && canBeStrong && !blockedFromStrong) {
     return {
       status: "strong",
       statusLabel: "Strong",
@@ -264,7 +322,7 @@ function getReadinessStatus(
         "This pack covers most issues but has some gaps. Review warnings before submission.",
     };
   }
-  if (score >= 40 || criticalWarnings.length === 0) {
+  if (score >= 40) {
     return {
       status: "weak",
       statusLabel: "Weak",

@@ -25,6 +25,10 @@ export type EvidenceCategory = "Condition Report" | "Maintenance" | "Rent" | "Co
 
 export type CommsChannel = "email" | "phone" | "sms" | "in_person" | "letter" | "app" | "other";
 
+export type CommsDirection = "outbound" | "inbound";
+
+export type CommsResponseStatus = "awaiting" | "received" | "none";
+
 export type ExpenseCategory =
   | "Repairs"
   | "Cleaning"
@@ -205,6 +209,8 @@ export interface Database {
           channel: CommsChannel;
           summary: string;
           attachment_links: string[] | null;
+          direction: CommsDirection;
+          response_status: CommsResponseStatus | null;
           created_at: string;
         };
         Insert: {
@@ -216,6 +222,8 @@ export interface Database {
           channel: CommsChannel;
           summary: string;
           attachment_links?: string[] | null;
+          direction?: CommsDirection;
+          response_status?: CommsResponseStatus | null;
           created_at?: string;
         };
         Update: {
@@ -227,6 +235,8 @@ export interface Database {
           channel?: CommsChannel;
           summary?: string;
           attachment_links?: string[] | null;
+          direction?: CommsDirection;
+          response_status?: CommsResponseStatus | null;
           created_at?: string;
         };
       };

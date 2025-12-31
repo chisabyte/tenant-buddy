@@ -17,39 +17,50 @@ const statusConfig: Record<
     textColor: string;
     ringColor: string;
     progressColor: string;
+    // Dark text for light backgrounds
+    headerText: string;
+    bodyText: string;
   }
 > = {
   strong: {
     icon: CheckCircle,
     bgColor: "bg-green-500/10",
     borderColor: "border-green-500/30",
-    textColor: "text-green-400",
+    textColor: "text-green-600 dark:text-green-400",
     ringColor: "ring-green-500/20",
     progressColor: "bg-green-500",
+    headerText: "text-slate-700 dark:text-white/90",
+    bodyText: "text-slate-700 dark:text-white/80",
   },
   adequate: {
     icon: Shield,
     bgColor: "bg-primary/10",
     borderColor: "border-primary/30",
-    textColor: "text-primary",
+    textColor: "text-primary dark:text-primary",
     ringColor: "ring-primary/20",
     progressColor: "bg-primary",
+    headerText: "text-slate-700 dark:text-white/90",
+    bodyText: "text-slate-700 dark:text-white/80",
   },
   weak: {
     icon: AlertCircle,
     bgColor: "bg-amber-500/10",
     borderColor: "border-amber-500/30",
-    textColor: "text-amber-400",
+    textColor: "text-amber-600 dark:text-amber-400",
     ringColor: "ring-amber-500/20",
     progressColor: "bg-amber-500",
+    headerText: "text-slate-700 dark:text-white/90",
+    bodyText: "text-slate-700 dark:text-white/80",
   },
   "at-risk": {
     icon: AlertTriangle,
     bgColor: "bg-red-500/10",
     borderColor: "border-red-500/30",
-    textColor: "text-red-400",
+    textColor: "text-red-600 dark:text-red-400",
     ringColor: "ring-red-500/20",
     progressColor: "bg-red-500",
+    headerText: "text-slate-700 dark:text-white/90",
+    bodyText: "text-slate-700 dark:text-white/80",
   },
 };
 
@@ -68,7 +79,7 @@ export function CaseHealthCard({ health, className = "" }: CaseHealthCardProps) 
             <Icon className={`h-5 w-5 ${config.textColor}`} />
           </div>
           <div>
-            <p className="text-xs font-medium text-text-subtle uppercase tracking-wide">
+            <p className={`text-xs font-medium ${config.headerText} uppercase tracking-wide`}>
               Case Health
             </p>
             <p className={`text-lg font-bold ${config.textColor}`}>
@@ -92,7 +103,7 @@ export function CaseHealthCard({ health, className = "" }: CaseHealthCardProps) 
       </div>
 
       {/* Description */}
-      <p className="text-sm text-text-subtle mb-4">{health.statusDescription}</p>
+      <p className={`text-sm ${config.bodyText} mb-4`}>{health.statusDescription}</p>
 
       {/* Critical factors */}
       {health.factors.length > 0 && (
@@ -114,7 +125,7 @@ export function CaseHealthCard({ health, className = "" }: CaseHealthCardProps) 
                       : "bg-green-400"
                   }`}
                 />
-                <span className="text-text-subtle">{factor.recommendation}</span>
+                <span className={config.bodyText}>{factor.recommendation}</span>
               </div>
             ))}
         </div>

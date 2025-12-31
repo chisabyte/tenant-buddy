@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { MoreVertical, Eye, Image, FileText, Mail, File, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,10 +43,27 @@ export function EvidenceCard({ item, onView }: EvidenceCardProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const Icon = typeIcons[item.type.toLowerCase()] || File;
   const categoryColor =
     categoryColors[item.category?.toLowerCase() || ""] || categoryColors.default;
   const isImage = ["photo", "screenshot"].includes(item.type.toLowerCase());
+
+  // Handle mounting for portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Disable body scroll when modal is open
+  useEffect(() => {
+    if (showModal) {
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [showModal]);
 
   // Fetch signed URL for image files
   useEffect(() => {
@@ -168,28 +186,37 @@ export function EvidenceCard({ item, onView }: EvidenceCardProps) {
       </div>
       </div>
 
-      {/* Image Modal */}
-      {showModal && imageUrl && (
+      {/* Image Modal - Rendered via Portal */}
+      {showModal && imageUrl && mounted && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.85)" }}
           onClick={() => setShowModal(false)}
         >
-          <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 z-10 bg-white/90 hover:bg-white text-slate-900 rounded-full p-2 transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
-            <div className="relative w-full h-full flex items-center justify-center">
-              <img
-                src={imageUrl}
-                alt={item.note || item.file_path?.split("/").pop() || "Evidence"}
-                className="max-w-full max-h-full object-contain"
-              />
-            </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowModal(false);
+            }}
+            className="absolute top-4 right-4 z-10 bg-white/90 hover:bg-white text-slate-900 rounded-full p-2 transition-colors shadow-lg"
+            aria-label="Close image viewer"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <div
+            className="relative flex items-center justify-center p-4"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "90vw", maxHeight: "90vh" }}
+          >
+            <img
+              src={imageUrl}
+              alt={item.note || item.file_path?.split("/").pop() || "Evidence"}
+              className="max-w-full max-h-full object-contain"
+              style={{ maxWidth: "90vw", maxHeight: "90vh" }}
+            />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -224,11 +251,11 @@ export function EvidenceGrid({
             </div>
             <div className="flex flex-col gap-1">
               <h3 className="text-white font-bold text-lg">Upload New</h3>
-              <p className="text-text-subtle text-sm">
+              <p className="text-white/80 text-sm">
                 Drag files here or click
               </p>
             </div>
-            <span className="flex items-center gap-1 text-[10px] text-primary bg-primary/10 px-2 py-1 rounded-full mt-2">
+            <span className="flex items-center gap-1 text-[10px] text-primary bg-primary/10 px-2 py-1 rounded-full mt-2 font-medium">
               🔒 Encrypted
             </span>
           </div>

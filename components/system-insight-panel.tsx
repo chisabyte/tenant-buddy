@@ -261,11 +261,11 @@ export function SystemInsightPanel({
     <div className={`rounded-xl bg-card-dark border ${getBorderColor()} p-5`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-medium text-text-subtle uppercase tracking-wide">
+        <p className="text-xs font-medium text-white/90 uppercase tracking-wide">
           System Insight
         </p>
         {insights.length > 1 && (
-          <span className="text-xs text-text-subtle">
+          <span className="text-xs text-white/70">
             {currentIndex + 1} of {insights.length}
           </span>
         )}
@@ -283,7 +283,7 @@ export function SystemInsightPanel({
             <p className="text-sm font-semibold text-white mb-1">
               {currentInsight.title}
             </p>
-            <p className="text-sm text-text-subtle leading-relaxed">
+            <p className="text-sm text-white/80 leading-relaxed">
               {currentInsight.message}
             </p>
           </div>

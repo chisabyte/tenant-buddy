@@ -97,6 +97,9 @@ export default function NewPackPage() {
   const [showEnforcementModal, setShowEnforcementModal] = useState(false);
   const [userPlanId, setUserPlanId] = useState<PlanId>("free");
 
+  // Pack mode state
+  const [packMode, setPackMode] = useState<"concise" | "detailed">("concise");
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -373,16 +376,87 @@ export default function NewPackPage() {
     setGenerating(true);
 
     try {
-      // For now, we'll just show a success message
-      // In a real implementation, this would call an API to generate the PDF
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (selectedIssues.size === 0) {
+        alert("Please select at least one issue to include in the pack.");
+        setGenerating(false);
+        return;
+      }
 
-      alert(
-        "Evidence pack generation is not yet implemented. This feature will generate a PDF with your selected issues and evidence."
-      );
-    } catch (err) {
+      const issueIds = Array.from(selectedIssues);
+      
+      // Calculate date range from all selected issues
+      const selectedIssuesData = issues.filter(issue => issueIds.includes(issue.id));
+      const allDates: Date[] = [
+        ...selectedIssuesData.map(issue => new Date(issue.created_at)),
+        ...selectedIssuesData.flatMap(issue => 
+          (issue.evidence_items || []).map(e => new Date(e.uploaded_at))
+        ),
+        ...commsLogs.filter(c => issueIds.includes(c.issue_id)).map(c => new Date(c.occurred_at)),
+      ];
+      
+      const minDate = allDates.length > 0 
+        ? new Date(Math.min(...allDates.map(d => d.getTime())))
+        : new Date(new Date().getFullYear(), 0, 1);
+      const maxDate = allDates.length > 0
+        ? new Date(Math.max(...allDates.map(d => d.getTime())))
+        : new Date();
+
+      const fromDate = minDate.toISOString().split('T')[0];
+      const toDate = maxDate.toISOString().split('T')[0];
+
+      const response = await fetch("/api/evidence-packs/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          issueIds,
+          fromDate,
+          toDate,
+          mode: packMode,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.downloadUrl) {
+        // Trigger download
+        const link = document.createElement("a");
+        link.href = data.downloadUrl;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Show success message with mode-specific details
+        const readinessLabel = data.packReadiness?.statusLabel || "Generated";
+        const healthLabel = data.caseHealth?.statusLabel || "N/A";
+        const modeLabel = data.mode === "concise" ? "Concise (5 pages max)" : "Detailed (Full content)";
+        
+        alert(
+          `✅ Evidence Pack v${data.version || "2.0"} Generated Successfully!\n\n` +
+          `📄 Mode: ${modeLabel}\n` +
+          `📊 Pack Readiness: ${readinessLabel} (${data.packReadiness?.score || 0}%)\n` +
+          `🏥 Case Health: ${healthLabel} (${data.caseHealth?.score || 0}%)\n\n` +
+          `📋 Contents:\n` +
+          `   • Issues: ${data.issuesCount}\n` +
+          `   • Evidence items: ${data.evidenceCount}\n` +
+          `   • Communications: ${data.commsCount}\n` +
+          (data.imagesEmbedded ? `   • Images embedded: ${data.imagesEmbedded}\n` : "") +
+          `\n📥 The file has been downloaded.`
+        );
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (err: any) {
       console.error("Error generating pack:", err);
-      alert("Failed to generate evidence pack. Please try again.");
+      const errorMessage = err.message || "Failed to generate evidence pack. Please try again.";
+      alert(`Error: ${errorMessage}`);
     } finally {
       setGenerating(false);
     }
@@ -469,32 +543,44 @@ export default function NewPackPage() {
           icon: Shield,
           bg: "bg-green-500/10",
           border: "border-green-500/30",
-          text: "text-green-400",
+          text: "text-green-600 dark:text-green-400",
           progressBg: "bg-green-500",
+          // Dark text for light backgrounds
+          bodyText: "text-slate-700 dark:text-white/80",
+          statLabel: "text-slate-600 dark:text-white/70",
         };
       case "moderate":
         return {
           icon: CheckCircle,
           bg: "bg-primary/10",
           border: "border-primary/30",
-          text: "text-primary",
+          text: "text-primary dark:text-primary",
           progressBg: "bg-primary",
+          // Dark text for light backgrounds
+          bodyText: "text-slate-700 dark:text-white/80",
+          statLabel: "text-slate-600 dark:text-white/70",
         };
       case "weak":
         return {
           icon: AlertCircle,
           bg: "bg-amber-500/10",
           border: "border-amber-500/30",
-          text: "text-amber-400",
+          text: "text-amber-600 dark:text-amber-400",
           progressBg: "bg-amber-500",
+          // Dark text for light backgrounds
+          bodyText: "text-slate-700 dark:text-white/80",
+          statLabel: "text-slate-600 dark:text-white/70",
         };
       case "high-risk":
         return {
           icon: ShieldAlert,
           bg: "bg-red-500/10",
           border: "border-red-500/30",
-          text: "text-red-400",
+          text: "text-red-600 dark:text-red-400",
           progressBg: "bg-red-500",
+          // Dark text for light backgrounds
+          bodyText: "text-slate-700 dark:text-white/80",
+          statLabel: "text-slate-600 dark:text-white/70",
         };
     }
   };
@@ -552,7 +638,7 @@ export default function NewPackPage() {
                   {packReadiness.score}%
                 </span>
               </div>
-              <p className="text-text-subtle text-sm">
+              <p className={`text-sm ${readinessConfig.bodyText}`}>
                 {packReadiness.statusDescription}
               </p>
             </div>
@@ -561,19 +647,19 @@ export default function NewPackPage() {
           {/* Coverage Stats */}
           <div className="flex items-center gap-6 text-sm">
             <div className="text-center">
-              <p className="text-white font-bold text-xl">
+              <p className="text-slate-900 dark:text-white font-bold text-xl">
                 {packReadiness.coverage.includedIssues}
               </p>
-              <p className="text-text-subtle text-xs">
+              <p className={`text-xs ${readinessConfig.statLabel}`}>
                 of {packReadiness.coverage.totalOpenIssues} included
               </p>
             </div>
             {packReadiness.coverage.excludedIssues > 0 && (
               <div className="text-center">
-                <p className="text-amber-400 font-bold text-xl">
+                <p className="text-amber-600 dark:text-amber-400 font-bold text-xl">
                   {packReadiness.coverage.excludedIssues}
                 </p>
-                <p className="text-text-subtle text-xs">excluded</p>
+                <p className={`text-xs ${readinessConfig.statLabel}`}>excluded</p>
               </div>
             )}
           </div>
@@ -595,10 +681,10 @@ export default function NewPackPage() {
                 key={idx}
                 className={`flex items-start gap-2 text-sm ${
                   warning.type === "critical"
-                    ? "text-red-400"
+                    ? "text-red-700 dark:text-red-400"
                     : warning.type === "warning"
-                    ? "text-amber-400"
-                    : "text-text-subtle"
+                    ? "text-amber-700 dark:text-amber-400"
+                    : "text-slate-700 dark:text-white/90"
                 }`}
               >
                 {warning.type === "critical" ? (
@@ -614,7 +700,7 @@ export default function NewPackPage() {
               </div>
             ))}
             {packReadiness.warnings.length > 3 && (
-              <p className="text-text-subtle text-xs ml-6">
+              <p className={`text-xs ml-6 ${readinessConfig.bodyText}`}>
                 + {packReadiness.warnings.length - 3} more warnings
               </p>
             )}
@@ -742,7 +828,7 @@ export default function NewPackPage() {
                                 {issue.title}
                               </h3>
                             </div>
-                            <p className="text-sm text-text-subtle">
+                            <p className="text-sm text-white/80">
                               Reported: {reportedDate} • {evidenceItems.length}{" "}
                               evidence • {commsCount} comms
                             </p>
@@ -769,7 +855,7 @@ export default function NewPackPage() {
                         {exclusionWarning && (
                           <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-3">
                             <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                            <p className="text-amber-400 text-sm">
+                            <p className="text-amber-300 text-sm font-medium">
                               {exclusionWarning}
                             </p>
                           </div>
@@ -901,13 +987,61 @@ export default function NewPackPage() {
                 </div>
               </div>
               <div className="relative p-6 flex flex-col bg-background-dark/50">
+                {/* Mode Selector */}
+                <div className="mb-4">
+                  <p className="text-xs text-text-subtle uppercase font-semibold mb-2">
+                    Pack Mode
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setPackMode("concise")}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        packMode === "concise"
+                          ? "border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border-card-lighter bg-card-dark hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-3 h-3 rounded-full ${packMode === "concise" ? "bg-primary" : "bg-card-lighter"}`} />
+                        <span className={`text-sm font-bold ${packMode === "concise" ? "text-primary" : "text-white"}`}>
+                          Concise
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-subtle">
+                        5 pages max • Embedded images
+                      </p>
+                      <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">
+                        Recommended
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setPackMode("detailed")}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        packMode === "detailed"
+                          ? "border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border-card-lighter bg-card-dark hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-3 h-3 rounded-full ${packMode === "detailed" ? "bg-primary" : "bg-card-lighter"}`} />
+                        <span className={`text-sm font-bold ${packMode === "detailed" ? "text-primary" : "text-white"}`}>
+                          Detailed
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-subtle">
+                        Full content • All images
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Filename */}
                 <div className="mb-4">
                   <p className="text-xs text-text-subtle uppercase font-semibold mb-1">
                     Filename
                   </p>
                   <p className="text-white font-medium text-sm truncate">
-                    {packFilename}
+                    {packFilename.replace("Evidence_Pack", `Evidence_Pack_${packMode === "concise" ? "Concise" : "Detailed"}`)}
                   </p>
                 </div>
 
@@ -1042,61 +1176,86 @@ export default function NewPackPage() {
               </div>
             </div>
 
-            {/* Document Structure */}
+            {/* Document Structure - v2 */}
             <div className="bg-card-dark rounded-xl border border-card-lighter p-5 shadow-sm">
-              <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">
-                Document Structure
-              </h4>
-              <div className="space-y-0 relative">
-                <div className="absolute left-[11px] top-2 bottom-4 w-0.5 bg-card-lighter" />
-                <div className="relative flex items-center gap-3 pb-4">
-                  <div className="h-6 w-6 rounded-full bg-green-500 border-2 border-card-dark z-10 flex items-center justify-center">
-                    <Check className="h-3 w-3 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-white">
-                    Cover Sheet
-                  </span>
-                </div>
-                <div className="relative flex items-center gap-3 pb-4">
-                  <div className="h-6 w-6 rounded-full bg-green-500 border-2 border-card-dark z-10 flex items-center justify-center">
-                    <Check className="h-3 w-3 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-white">
-                    Table of Contents
-                  </span>
-                </div>
-                <div className="relative flex items-center gap-3 pb-4">
-                  <div
-                    className={`h-6 w-6 rounded-full border-2 border-card-dark z-10 flex items-center justify-center ${
-                      selectedIssues.size > 0
-                        ? "bg-primary shadow-lg shadow-primary/30"
-                        : "bg-card-lighter"
-                    }`}
-                  >
-                    <FileText className="h-3 w-3 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span
-                      className={`text-sm font-bold ${
-                        selectedIssues.size > 0 ? "text-primary" : "text-text-subtle"
-                      }`}
-                    >
-                      Evidence Body
-                    </span>
-                    <span className="text-xs text-text-subtle">
-                      {selectedIssues.size} issues, {totalSelectedEvidence}{" "}
-                      files
-                    </span>
-                  </div>
-                </div>
-                <div className="relative flex items-center gap-3">
-                  <div className="h-6 w-6 rounded-full bg-card-lighter border-2 border-card-dark z-10 flex items-center justify-center">
-                    <Gavel className="h-3 w-3 text-text-subtle" />
-                  </div>
-                  <span className="text-sm font-medium text-text-subtle">
-                    Legal Disclaimer
-                  </span>
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-white uppercase tracking-wider">
+                  {packMode === "concise" ? "Concise Layout" : "Detailed Layout"}
+                </h4>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                  packMode === "concise" 
+                    ? "text-green-400 bg-green-500/10" 
+                    : "text-primary bg-primary/10"
+                }`}>
+                  {packMode === "concise" ? "≤5 pages" : "Full content"}
+                </span>
+              </div>
+              <div className="space-y-0 relative text-xs">
+                <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-card-lighter" />
+                {packMode === "concise" ? (
+                  // Concise mode structure
+                  <>
+                    {[
+                      { label: "Page 1", active: true, desc: "Cover + Readiness + Summary + Gaps" },
+                      { label: "Pages 2-5", active: selectedIssues.size > 0, desc: `Issue sections with embedded images` },
+                    ].map((item, idx) => (
+                      <div key={idx} className="relative flex items-center gap-2 pb-2">
+                        <div
+                          className={`h-4 w-4 rounded-full border border-card-dark z-10 flex items-center justify-center ${
+                            item.active ? "bg-green-500" : "bg-card-lighter"
+                          }`}
+                        >
+                          {item.active && <Check className="h-2 w-2 text-white" />}
+                        </div>
+                        <div className="flex-1 flex items-center justify-between">
+                          <span className={item.active ? "text-white" : "text-text-subtle"}>
+                            {item.label}
+                          </span>
+                          <span className="text-text-subtle">{item.desc}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="mt-3 p-2 rounded bg-green-500/10 border border-green-500/20">
+                      <p className="text-green-400 text-[10px] font-medium mb-1">Per Issue Section:</p>
+                      <ul className="text-text-subtle text-[10px] space-y-0.5">
+                        <li>• Issue facts + mini timeline</li>
+                        <li>• Up to 4 images (2×2 grid)</li>
+                        <li>• Recent comms + response status</li>
+                        <li>• SHA-256 hashes</li>
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  // Detailed mode structure
+                  [
+                    { label: "Cover Page", active: true, desc: "Property & jurisdiction" },
+                    { label: "Pack Readiness", active: true, desc: packReadiness.statusLabel },
+                    { label: "Executive Summary", active: true, desc: "Factual conclusion" },
+                    { label: "Risk & Urgency", active: selectedIssues.size > 0, desc: "Priority overview" },
+                    { label: "Master Timeline", active: selectedIssues.size > 0, desc: "All events" },
+                    { label: "Issue Details", active: selectedIssues.size > 0, desc: `${selectedIssues.size} full sections` },
+                    { label: "Evidence Inventory", active: totalSelectedEvidence > 0, desc: `${totalSelectedEvidence} items + SHA-256` },
+                    { label: "Comms Log", active: true, desc: "Full history" },
+                    { label: "Documentation Gaps", active: true, desc: "All gaps" },
+                    { label: "Disclaimers", active: true, desc: "Legal notices" },
+                  ].map((item, idx) => (
+                    <div key={idx} className="relative flex items-center gap-2 pb-2">
+                      <div
+                        className={`h-4 w-4 rounded-full border border-card-dark z-10 flex items-center justify-center ${
+                          item.active ? "bg-primary" : "bg-card-lighter"
+                        }`}
+                      >
+                        {item.active && <Check className="h-2 w-2 text-white" />}
+                      </div>
+                      <div className="flex-1 flex items-center justify-between">
+                        <span className={item.active ? "text-white" : "text-text-subtle"}>
+                          {item.label}
+                        </span>
+                        <span className="text-text-subtle">{item.desc}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -1122,7 +1281,7 @@ export default function NewPackPage() {
                   <h3 className="text-xl font-bold text-white">
                     Confirm Pack Generation
                   </h3>
-                  <p className="text-sm text-text-subtle">
+                  <p className="text-sm text-white/80">
                     Your pack has gaps that may affect your position
                   </p>
                 </div>
@@ -1150,7 +1309,7 @@ export default function NewPackPage() {
                             <p className="text-red-400 font-medium">
                               {warning.title}
                             </p>
-                            <p className="text-text-subtle">{warning.message}</p>
+                            <p className="text-white/90">{warning.message}</p>
                           </div>
                         </div>
                       ))}
@@ -1171,7 +1330,7 @@ export default function NewPackPage() {
                       .map((warning, idx) => (
                         <div
                           key={idx}
-                          className="flex items-start gap-2 text-sm text-text-subtle"
+                          className="flex items-start gap-2 text-sm text-white/90"
                         >
                           <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
                           <span>{warning.message}</span>
@@ -1206,7 +1365,7 @@ export default function NewPackPage() {
                   }
                   className="h-5 w-5 rounded border-card-lighter text-primary focus:ring-0 bg-background-dark cursor-pointer mt-0.5"
                 />
-                <span className="text-sm text-text-subtle">
+                <span className="text-sm text-white/90">
                   I understand that excluded issues will{" "}
                   <strong className="text-white">not</strong> be included in
                   this submission artifact. I have reviewed the warnings and

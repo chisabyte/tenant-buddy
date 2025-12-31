@@ -89,13 +89,18 @@ export const commsLogSchema = z.object({
   channel: z.enum(['email', 'phone', 'sms', 'in_person', 'letter', 'app', 'other']),
   summary: z.string().min(5, "Summary must be at least 5 characters"),
   attachmentLinks: z.array(z.string().url()).optional(),
+  direction: z.enum(['outbound', 'inbound']).default('outbound'),
+  responseStatus: z.enum(['awaiting', 'received', 'none']).optional(),
 });
 
 export const evidencePackSchema = z.object({
-  issueId: z.string().uuid(),
-  fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  issueIds: z.array(z.string().uuid()).min(1, "At least one issue is required"),
+  fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  mode: z.enum(["concise", "detailed"]).default("concise"),
 });
+
+export type EvidencePackMode = "concise" | "detailed";
 
 export const expenseItemSchema = z.object({
   propertyId: z.string().uuid(),
