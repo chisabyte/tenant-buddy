@@ -6,6 +6,18 @@ const nextConfig = {
     // TODO: Fix ESLint config and remove this (see follow-up plan)
     ignoreDuringBuilds: true,
   },
+  // Externalize PDFKit to run as native Node.js module (not bundled by webpack)
+  // This ensures font files are loaded from node_modules correctly
+  experimental: {
+    serverComponentsExternalPackages: ['pdfkit'],
+  },
+  // Include PDFKit font files in serverless function bundle for Vercel
+  // This ensures Helvetica.afm and other font metrics files are available
+  outputFileTracingIncludes: {
+    '/api/evidence-packs/generate': [
+      './node_modules/pdfkit/js/data/**/*',
+    ],
+  },
   images: {
     remotePatterns: [
       {
