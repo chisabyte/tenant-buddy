@@ -216,6 +216,27 @@ export default function NewPackPage() {
     return calculatePackReadiness(issues, selectedIssues, commsLogs);
   }, [issues, selectedIssues, commsLogs]);
 
+  // PRODUCTION SAFETY: Check for weak pack conditions (no comms, no evidence)
+  const weakPackWarnings = useMemo(() => {
+    const selectedIssuesData = issues.filter(issue => selectedIssues.has(issue.id));
+    const selectedIssueIds = Array.from(selectedIssues);
+    
+    // Check for communications
+    const commsForSelected = commsLogs.filter(c => selectedIssueIds.includes(c.issue_id));
+    const hasNoComms = commsForSelected.length === 0;
+    
+    // Check for evidence per issue
+    const issuesWithNoEvidence = selectedIssuesData.filter(
+      issue => !issue.evidence_items || issue.evidence_items.length === 0
+    );
+    
+    return {
+      hasNoComms,
+      issuesWithNoEvidence: issuesWithNoEvidence.map(i => ({ id: i.id, title: i.title })),
+      hasAnyMissingEvidence: issuesWithNoEvidence.length > 0,
+    };
+  }, [issues, selectedIssues, commsLogs]);
+
   // Calculate enforcement based on pack readiness
   const packEnforcement = useMemo(() => {
     // Map pack readiness status to case health status
@@ -323,6 +344,14 @@ export default function NewPackPage() {
       // Soft-blocked - show enforcement confirmation modal
       setEnforcement(packEnforcement);
       setShowEnforcementModal(true);
+      return;
+    }
+
+    // PRODUCTION SAFETY: Show confirmation if weak pack (no comms or no evidence)
+    // This ensures users acknowledge missing documentation before generating
+    if (weakPackWarnings.hasNoComms || weakPackWarnings.hasAnyMissingEvidence) {
+      setShowConfirmation(true);
+      setConfirmationAcknowledged(false);
       return;
     }
 
@@ -1116,6 +1145,45 @@ export default function NewPackPage() {
                   </div>
                 )}
 
+                {/* PRODUCTION SAFETY: Warnings for weak packs (no comms, no evidence) */}
+                {packEnforcement.allowed && selectedIssues.size > 0 && (
+                  <>
+                    {weakPackWarnings.hasNoComms && (
+                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-4">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-amber-400 text-sm font-medium">
+                              No Communications Logged
+                            </p>
+                            <p className="text-text-subtle text-xs mt-1">
+                              No communications have been logged for the selected issues. Missing communications may weaken your record.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {weakPackWarnings.hasAnyMissingEvidence && (
+                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-4">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-amber-400 text-sm font-medium">
+                              Missing Evidence
+                            </p>
+                            <p className="text-text-subtle text-xs mt-1">
+                              {weakPackWarnings.issuesWithNoEvidence.length === 1
+                                ? `Issue "${weakPackWarnings.issuesWithNoEvidence[0].title}" has no evidence items.`
+                                : `${weakPackWarnings.issuesWithNoEvidence.length} selected issues have no evidence items.`}
+                              {" "}Missing evidence may weaken your record.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
                 <Button
                   onClick={handleGenerateClick}
                   disabled={generating || selectedIssues.size === 0}
@@ -1366,10 +1434,11 @@ export default function NewPackPage() {
                   className="h-5 w-5 rounded border-card-lighter text-primary focus:ring-0 bg-background-dark cursor-pointer mt-0.5"
                 />
                 <span className="text-sm text-white/90">
-                  I understand that excluded issues will{" "}
-                  <strong className="text-white">not</strong> be included in
-                  this submission artifact. I have reviewed the warnings and
-                  accept responsibility for the pack contents.
+                  I understand that{" "}
+                  {weakPackWarnings.hasNoComms && "missing communications and "}
+                  {weakPackWarnings.hasAnyMissingEvidence && "missing evidence "}
+                  {!weakPackWarnings.hasNoComms && !weakPackWarnings.hasAnyMissingEvidence && "excluded issues "}
+                  may weaken my record. I have reviewed the warnings and accept responsibility for the pack contents.
                 </span>
               </label>
             </div>

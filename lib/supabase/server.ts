@@ -4,6 +4,15 @@ import { cookies } from "next/headers";
 export async function createClient() {
   const cookieStore = await cookies();
 
+  // Debug logging only when explicitly enabled (never logs in production by default)
+  const debugEnabled = process.env.DEBUG_TOOLS_ENABLED === 'true';
+  if (debugEnabled) {
+    // Only log project ref, never full URL or keys
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const projectRef = url?.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || 'unknown';
+    console.log('[SERVER DEBUG] Supabase project ref:', projectRef);
+  }
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

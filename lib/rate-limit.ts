@@ -84,13 +84,9 @@ async function rateLimitWithUpstash(
 
     if (!response.ok) {
       console.error("Upstash rate limit error:", await response.text());
-      // Fall back to allowing the request if Redis fails
-      return {
-        allowed: true,
-        remaining: config.requests,
-        reset: now + config.window,
-        limit: config.requests,
-      };
+      // FAIL-SAFE: Fall back to conservative in-memory limiter instead of allowing all requests
+      // This prevents abuse when Redis is unavailable
+      return rateLimitWithMemory(identifier, type);
     }
 
     const results = await response.json();
@@ -105,13 +101,9 @@ async function rateLimitWithUpstash(
     };
   } catch (error) {
     console.error("Upstash rate limit error:", error);
-    // Fall back to allowing the request if Redis fails
-    return {
-      allowed: true,
-      remaining: config.requests,
-      reset: now + config.window,
-      limit: config.requests,
-    };
+    // FAIL-SAFE: Fall back to conservative in-memory limiter instead of allowing all requests
+    // This prevents abuse when Redis is unavailable
+    return rateLimitWithMemory(identifier, type);
   }
 }
 

@@ -55,6 +55,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // PRODUCTION SAFETY: Daily cap per user (conservative fallback if billing tier not reliable)
+    // Only enforced when ENFORCE_LIMITS=true (default: false for backward compatibility)
+    const enforceLimits = process.env.ENFORCE_LIMITS === 'true';
+    if (enforceLimits) {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const { count: packsToday } = await supabase
+        .from("evidence_pack_runs")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", todayStart.toISOString());
+
+      // Conservative daily cap: 10 packs per day (applies to all users regardless of plan)
+      // This prevents abuse even if billing system has issues
+      const DAILY_CAP = 10;
+      if ((packsToday || 0) >= DAILY_CAP) {
+        return NextResponse.json(
+          {
+            error: `You have reached the daily limit of ${DAILY_CAP} evidence packs. Please try again tomorrow.`,
+            code: "DAILY_LIMIT_EXCEEDED",
+            limit: DAILY_CAP,
+            usage: packsToday || 0,
+            retryAfter: new Date(todayStart.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+          },
+          { 
+            status: 429,
+            headers: {
+              "Retry-After": String(Math.ceil((todayStart.getTime() + 24 * 60 * 60 * 1000 - Date.now()) / 1000)),
+            },
+          }
+        );
+      }
+    }
+
     const body = await request.json();
     const { issueIds, fromDate, toDate, mode } = evidencePackSchema.parse(body);
 

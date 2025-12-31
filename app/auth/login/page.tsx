@@ -51,14 +51,29 @@ function LoginForm() {
       }
 
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      
+      // Debug logging only when explicitly enabled (never logs secrets)
+      const debugEnabled = process.env.NEXT_PUBLIC_DEBUG_TOOLS_ENABLED === 'true';
+      if (debugEnabled) {
+        console.log('[LOGIN DEBUG] Attempting login for:', result.data.email);
+      }
+      
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: result.data.email,
         password: result.data.password,
       });
 
+      // Log errors only when debug enabled (never logs full error objects with secrets)
       if (signInError) {
-        // Don't expose whether email exists
+        if (debugEnabled) {
+          console.error('[LOGIN DEBUG] Login error:', signInError.message);
+        }
+        // Don't expose whether email exists to user
         throw new Error("Invalid email or password");
+      }
+      
+      if (debugEnabled && signInData?.session) {
+        console.log('[LOGIN DEBUG] Login successful');
       }
 
       // Force a refresh to update server-side session
