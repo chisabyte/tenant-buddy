@@ -62,10 +62,13 @@ function NewCommsForm() {
     setLoading(true);
 
     try {
+      // Convert datetime-local format (YYYY-MM-DDTHH:MM) to ISO format with seconds
+      const occurredAtISO = occurredAt.length === 16 ? `${occurredAt}:00` : occurredAt;
+
       commsLogSchema.parse({
         propertyId,
         issueId: selectedIssueId || null,
-        occurredAt,
+        occurredAt: occurredAtISO,
         channel,
         summary,
       });
@@ -83,7 +86,7 @@ function NewCommsForm() {
         user_id: user.id,
         property_id: propertyId,
         issue_id: selectedIssueId || null,
-        occurred_at: occurredAt,
+        occurred_at: occurredAtISO,
         channel,
         summary,
       });

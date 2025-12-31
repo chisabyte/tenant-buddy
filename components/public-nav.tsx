@@ -1,14 +1,26 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export function PublicNav() {
   const pathname = usePathname();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   const isActive = (path: string) => pathname === path;
+
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsAuthenticated(!!user);
+    }
+    checkAuth();
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
@@ -46,12 +58,25 @@ export function PublicNav() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" className="hidden sm:flex">
-            <Link href="/auth/login">Sign In</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/auth/signup">Get Started</Link>
-          </Button>
+          {isAuthenticated === null ? (
+            // Loading state - show nothing to prevent flash
+            <div className="w-32 h-9" />
+          ) : isAuthenticated ? (
+            // Authenticated - show dashboard link
+            <Button asChild>
+              <Link href="/dashboard">Go to Dashboard</Link>
+            </Button>
+          ) : (
+            // Not authenticated - show sign in / get started
+            <>
+              <Button asChild variant="ghost" className="hidden sm:flex">
+                <Link href="/auth/login">Sign In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/auth/signup">Get Started</Link>
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>
