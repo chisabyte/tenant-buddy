@@ -130,7 +130,9 @@ export async function POST(request: NextRequest) {
     const defaultToDate = toDate || now.toISOString().split('T')[0];
 
     // Fetch all evidence items for selected issues
-    const { data: evidence } = await supabase
+    // CRITICAL: Filter by issue_id AND user_id to match UI behavior
+    // Date range filter is for pack scope, but we need all evidence for accurate counting
+    const { data: evidence, error: evidenceError } = await supabase
       .from("evidence_items")
       .select("id, type, category, note, occurred_at, sha256, issue_id, uploaded_at, file_path")
       .in("issue_id", issueIds)
@@ -139,8 +141,40 @@ export async function POST(request: NextRequest) {
       .lte("occurred_at", defaultToDate)
       .order("occurred_at", { ascending: true });
 
+    if (evidenceError) {
+      console.error("Error fetching evidence:", {
+        error: evidenceError,
+        code: evidenceError.code,
+        message: evidenceError.message,
+        details: evidenceError.details,
+        hint: evidenceError.hint,
+        issueIds,
+      });
+      // Wrap Supabase error in Error object so it's properly handled
+      const error = new Error(evidenceError.message || "Failed to fetch evidence");
+      (error as any).code = evidenceError.code;
+      throw error;
+    }
+
+    // SANITY CHECK (dev-only): Verify evidence count
+    if (process.env.NODE_ENV === 'development') {
+      const evidenceByIssue = new Map<string, number>();
+      (evidence || []).forEach(e => {
+        if (e.issue_id) {
+          evidenceByIssue.set(e.issue_id, (evidenceByIssue.get(e.issue_id) || 0) + 1);
+        }
+      });
+      console.log('[PDF] Evidence counts by issue:', Object.fromEntries(evidenceByIssue));
+      console.log('[PDF] Total evidence in date range:', evidence?.length || 0);
+      
+      // Warn if we have issues but no evidence (might indicate date range issue)
+      if (issueIds.length > 0 && (evidence?.length || 0) === 0) {
+        console.warn('[PDF] WARNING: No evidence found for issues. Date range:', defaultFromDate, 'to', defaultToDate);
+      }
+    }
+
     // Fetch all communications for selected issues
-    const { data: comms } = await supabase
+    const { data: comms, error: commsError } = await supabase
       .from("comms_logs")
       .select("id, occurred_at, channel, summary, issue_id, created_at")
       .in("issue_id", issueIds)
@@ -148,6 +182,38 @@ export async function POST(request: NextRequest) {
       .gte("occurred_at", defaultFromDate)
       .lte("occurred_at", defaultToDate)
       .order("occurred_at", { ascending: true });
+
+    if (commsError) {
+      console.error("Error fetching communications:", {
+        error: commsError,
+        code: commsError.code,
+        message: commsError.message,
+        details: commsError.details,
+        hint: commsError.hint,
+        issueIds,
+      });
+      // Wrap Supabase error in Error object so it's properly handled
+      const error = new Error(commsError.message || "Failed to fetch communications");
+      (error as any).code = commsError.code;
+      throw error;
+    }
+
+    // SANITY CHECK (dev-only): Verify comms count
+    if (process.env.NODE_ENV === 'development') {
+      const commsByIssue = new Map<string, number>();
+      (comms || []).forEach(c => {
+        if (c.issue_id) {
+          commsByIssue.set(c.issue_id, (commsByIssue.get(c.issue_id) || 0) + 1);
+        }
+      });
+      console.log('[PDF] Comms counts by issue:', Object.fromEntries(commsByIssue));
+      console.log('[PDF] Total comms in date range:', comms?.length || 0);
+      
+      // Warn if we have issues but no comms (might indicate date range issue)
+      if (issueIds.length > 0 && (comms?.length || 0) === 0) {
+        console.warn('[PDF] WARNING: No comms found for issues. Date range:', defaultFromDate, 'to', defaultToDate);
+      }
+    }
 
     // Fetch image buffers for embedding in PDF
     // Only fetch for photo/screenshot types

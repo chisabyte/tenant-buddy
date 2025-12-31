@@ -30,8 +30,46 @@ export default function UpdatePasswordPage() {
 
   useEffect(() => {
     // Check if user has a valid session from the reset link
+    // Also handle hash fragment tokens (implicit flow)
     async function checkSession() {
       const supabase = createClient();
+      
+      // Check for hash fragment tokens (implicit flow)
+      // Format: #access_token=...&refresh_token=...&type=recovery
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const hash = window.location.hash.substring(1); // Remove #
+        const params = new URLSearchParams(hash);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const type = params.get('type');
+        
+        // If we have a recovery token in the hash, set the session
+        if (accessToken && refreshToken && type === 'recovery') {
+          try {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            
+            if (error) {
+              console.error('Error setting session from hash:', error);
+              setValidSession(false);
+              return;
+            }
+            
+            // Clear the hash from URL
+            window.history.replaceState(null, '', window.location.pathname);
+            setValidSession(!!data.session);
+            return;
+          } catch (err) {
+            console.error('Error processing hash token:', err);
+            setValidSession(false);
+            return;
+          }
+        }
+      }
+      
+      // Check for existing session (PKCE flow or already authenticated)
       const { data: { session } } = await supabase.auth.getSession();
       setValidSession(!!session);
     }

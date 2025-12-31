@@ -368,13 +368,13 @@ export default async function DashboardPage() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-start gap-2 mb-1">
                           {isHighSeverity && (
-                            <span className="text-xs font-medium text-red-400">
+                            <span className="text-xs font-medium text-red-400 shrink-0">
                               {issue.severity}
                             </span>
                           )}
-                          <h3 className="text-white font-medium truncate group-hover:text-primary transition-colors">
+                          <h3 className="text-white font-medium line-clamp-2 group-hover:text-primary transition-colors flex-1 min-w-0">
                             {issue.title}
                           </h3>
                         </div>
@@ -394,16 +394,16 @@ export default async function DashboardPage() {
                           <span>{commsCount} comms</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 shrink-0">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusConfig.classes}`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusConfig.classes} whitespace-nowrap`}
                         >
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`}
                           />
                           {statusConfig.label}
                         </span>
-                        <ArrowRight className="h-4 w-4 text-text-subtle group-hover:text-primary transition-colors" />
+                        <ArrowRight className="h-4 w-4 text-text-subtle group-hover:text-primary transition-colors shrink-0" />
                       </div>
                     </div>
                   </Link>

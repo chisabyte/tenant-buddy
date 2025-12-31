@@ -1228,18 +1228,77 @@ function drawPageHeaderFooter(
 /**
  * Calculate documentation gaps using CANONICAL evidence stats.
  * This prevents false "no evidence" reports.
+ * DEDUPLICATES gaps to avoid spam (e.g., "No communications logged" appearing multiple times).
  */
 function calculateCanonicalGaps(data: EvidencePackV2Data): DocumentationGap[] {
   const gaps: DocumentationGap[] = [];
+  const gapKeys = new Set<string>(); // Track unique gaps by code + type
 
+  // First, collect all gaps from all issues
   data.issues.forEach(issue => {
     // Use CANONICAL stats functions
     const caseFacts = getIssueCaseFacts(issue, data.evidence, data.comms, data.generatedAt);
     const issueGaps = detectIssueGaps(issue, caseFacts);
-    gaps.push(...issueGaps);
+    
+    issueGaps.forEach(gap => {
+      // Create a unique key: code + type (e.g., "no_comms:critical")
+      const gapKey = `${gap.code}:${gap.type}`;
+      
+      // Only add if we haven't seen this exact gap type before
+      // OR if it's a per-issue gap (like "stale_evidence") that should be shown per issue
+      if (!gapKeys.has(gapKey) || gap.code === "stale_evidence") {
+        gaps.push(gap);
+        gapKeys.add(gapKey);
+      }
+    });
   });
 
-  return gaps;
+  // For concise mode, prefer global gaps over per-issue duplicates
+  // If all issues have the same gap, show it once as a global gap
+  const globalGaps: DocumentationGap[] = [];
+  const perIssueGaps: DocumentationGap[] = [];
+  
+  // Check for global patterns
+  const allIssuesHaveNoComms = data.issues.every(issue => {
+    const caseFacts = getIssueCaseFacts(issue, data.evidence, data.comms, data.generatedAt);
+    return caseFacts.commsStats.totalCount === 0;
+  });
+  
+  const allIssuesHaveNoEvidence = data.issues.every(issue => {
+    const caseFacts = getIssueCaseFacts(issue, data.evidence, data.comms, data.generatedAt);
+    return caseFacts.evidenceStats.totalCount === 0;
+  });
+
+  // Add global gaps if applicable
+  if (allIssuesHaveNoComms && data.issues.length > 1) {
+    globalGaps.push({
+      type: "critical",
+      issueId: "",
+      issueTitle: "",
+      description: "No communications logged across all issues",
+      code: "no_comms_global",
+    });
+  }
+  
+  if (allIssuesHaveNoEvidence && data.issues.length > 1) {
+    globalGaps.push({
+      type: "critical",
+      issueId: "",
+      issueTitle: "",
+      description: "No evidence attached across all issues",
+      code: "no_evidence_global",
+    });
+  }
+
+  // Filter out per-issue gaps that are covered by global gaps
+  const filteredGaps = gaps.filter(gap => {
+    if (allIssuesHaveNoComms && gap.code === "no_comms") return false;
+    if (allIssuesHaveNoEvidence && gap.code === "no_evidence") return false;
+    return true;
+  });
+
+  // Return global gaps first, then filtered per-issue gaps
+  return [...globalGaps, ...filteredGaps];
 }
 
 // Legacy function - redirects to canonical
