@@ -14,6 +14,8 @@
  */
 
 import PDFDocument from "pdfkit";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { getStateRules, STATE_INFO_DISCLAIMER, type AustralianState } from "@/lib/state-rules";
 import type { PackReadinessStatus } from "@/lib/pack-readiness";
 import type { CaseHealthStatus } from "@/lib/case-health";
@@ -32,6 +34,21 @@ import {
 import { normalizeForConcise, normalizeForDetailed } from "@/lib/text-normalizer";
 
 const VERSION = "2.2";
+
+// Load logo for PDF (mono version for print/grayscale)
+let logoBuffer: Buffer | null = null;
+function getLogoBuffer(): Buffer | null {
+  if (logoBuffer) return logoBuffer;
+  try {
+    // CRITICAL: Path uses capital "Branding" to match actual directory structure
+    const logoPath = join(process.cwd(), "public", "Branding", "logo-mono-dark.png");
+    logoBuffer = readFileSync(logoPath);
+    return logoBuffer;
+  } catch (error) {
+    console.warn("[PDF] Could not load logo:", error);
+    return null;
+  }
+}
 
 // STRICT LIMITS FOR CONCISE MODE
 const CONCISE_MAX_PAGES = 5;
@@ -225,6 +242,21 @@ function generateConcisePDF(doc: PDFKit.PDFDocument, data: EvidencePackV2Data): 
 function drawConciseCoverPage(doc: PDFKit.PDFDocument, data: EvidencePackV2Data): void {
   const stateInfo = getStateRules(data.property.state);
   let y = CONTENT_START_Y;
+
+  // Logo at top - EXPLICIT 160px WIDTH for brand readability
+  const logo = getLogoBuffer();
+  if (logo) {
+    try {
+      // CRITICAL: 160px width minimum - logo text "Tenant Buddy" must be clearly readable when printed
+      doc.image(logo, MARGIN, y, {
+        width: 160,
+        // Height auto-calculated from aspect ratio
+      });
+      y += 70;
+    } catch (error) {
+      console.warn("[PDF] Could not render logo:", error);
+    }
+  }
 
   // Title
   doc.fontSize(20)
@@ -610,7 +642,22 @@ function drawDetailedCoverPage(
   data: EvidencePackV2Data,
   stateInfo: ReturnType<typeof getStateRules>
 ): void {
-  let y = CONTENT_START_Y + 30;
+  let y = CONTENT_START_Y + 20;
+
+  // Logo at top - EXPLICIT 160px WIDTH for brand readability
+  const logo = getLogoBuffer();
+  if (logo) {
+    try {
+      // CRITICAL: 160px width minimum - logo text "Tenant Buddy" must be clearly readable when printed
+      doc.image(logo, MARGIN, y, {
+        width: 160,
+        // Height auto-calculated from aspect ratio
+      });
+      y += 80;
+    } catch (error) {
+      console.warn("[PDF] Could not render logo:", error);
+    }
+  }
 
   // Title
   doc.fontSize(24).font("Helvetica-Bold").fillColor(COLORS.primary)
@@ -1116,8 +1163,23 @@ function drawPageHeaderFooter(
 
   // Header text (only on page 2+)
   if (pageNum > 1) {
+    // Logo on left - EXPLICIT WIDTH for readability even in headers
+    const logo = getLogoBuffer();
+    if (logo) {
+      try {
+        // CRITICAL: Even in headers, use explicit width (smaller but still readable - 100px minimum)
+        doc.image(logo, MARGIN, MARGIN + 2, {
+          width: 100,
+          // Height auto-calculated from aspect ratio
+        });
+      } catch (error) {
+        // Logo failed, continue without it
+      }
+    }
+
+    // Position text to the right of logo (110px from left margin)
     doc.fontSize(7).fillColor(COLORS.muted)
-      .text(`Evidence Pack v${VERSION} (${mode})`, MARGIN, MARGIN + 8)
+      .text(`Evidence Pack v${VERSION} (${mode})`, MARGIN + 110, MARGIN + 8)
       .text(truncate(data.property.address_text, 40), PAGE_WIDTH - MARGIN - 150, MARGIN + 8, { width: 150, align: "right" });
   }
 

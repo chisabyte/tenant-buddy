@@ -3,7 +3,8 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PublicNav } from "@/components/public-nav";
-import { FileText, Shield, Lock, CheckCircle2, Clock, Upload, FolderOpen, Info, Calendar, CloudUpload, Download, Handshake, Home, Eye, Folder } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
+import { FileText, Lock, CheckCircle2, Clock, Upload, FolderOpen, Info, Calendar, CloudUpload, Download, Handshake, Home, Eye, Folder } from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -337,7 +338,7 @@ export default function LandingPage() {
                 <p className="text-gray-400 text-lg mb-8">We believe your tenancy history belongs to you. Our platform is built on privacy-first principles.</p>
                 <ul className="space-y-4">
                   <li className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-primary" />
+                    <Lock className="h-5 w-5 text-primary" />
                     <span className="font-medium">Private by default, always</span>
                   </li>
                   <li className="flex items-center gap-3">
@@ -345,7 +346,7 @@ export default function LandingPage() {
                     <span className="font-medium">You control your data, completely</span>
                   </li>
                   <li className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-primary" />
+                    <Lock className="h-5 w-5 text-primary" />
                     <span className="font-medium">Secure storage protects your records</span>
                   </li>
                   <li className="flex items-center gap-3">
@@ -468,10 +469,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10 text-primary">
-                <Shield className="h-4 w-4" />
-              </div>
-              <span className="font-bold text-foreground">Tenant Buddy</span>
+              <BrandLogo size="tablet" variant="primary" />
             </div>
             <div className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Tenant Buddy. All rights reserved.

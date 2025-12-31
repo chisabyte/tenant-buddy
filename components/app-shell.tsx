@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { BrandLogo } from "@/components/brand-logo";
 import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard,
@@ -10,7 +11,6 @@ import {
   FolderOpen,
   FileText,
   Settings,
-  Shield,
   Lock,
   Menu,
   X,
@@ -81,17 +81,7 @@ export function AppShell({ children, user, profile, property }: AppShellProps) {
         <div className="flex flex-col gap-8">
           {/* Branding */}
           <Link href="/dashboard" className="flex items-center gap-3 px-2 hover:opacity-80 transition-opacity">
-            <div className="bg-primary/20 rounded-lg p-2 flex items-center justify-center">
-              <Shield className="h-7 w-7 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-white text-lg font-bold leading-tight">
-                Tenant Buddy
-              </h1>
-              <p className="text-text-subtle text-xs font-normal">
-                Organized Renting
-              </p>
-            </div>
+            <BrandLogo size="desktop" variant="primary" priority />
           </Link>
 
           {/* Navigation Links */}
@@ -168,8 +158,7 @@ export function AppShell({ children, user, profile, property }: AppShellProps) {
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 bg-card-dark border-b border-card-lighter sticky top-0 z-20">
           <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Shield className="h-5 w-5 text-primary" />
-            <h1 className="text-white font-bold">Tenant Buddy</h1>
+            <BrandLogo size="mobile" variant="mono-light" priority />
           </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -185,8 +174,7 @@ export function AppShell({ children, user, profile, property }: AppShellProps) {
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity" onClick={() => setMobileMenuOpen(false)}>
-                  <Shield className="h-5 w-5 text-primary" />
-                  <h1 className="text-white font-bold">Tenant Buddy</h1>
+                  <BrandLogo size="mobile" variant="mono-light" priority />
                 </Link>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
