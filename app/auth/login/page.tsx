@@ -13,6 +13,7 @@ import { Shield, Loader2 } from "lucide-react";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const returnTo = searchParams?.get("returnTo");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -72,8 +73,11 @@ function LoginForm() {
           .eq('id', user.id)
           .single();
 
-        // Redirect to onboarding if no state set
-        if (!profile || !profile.state) {
+        // If there's a returnTo URL, go there (e.g., checkout flow)
+        if (returnTo) {
+          router.push(returnTo);
+        } else if (!profile || !profile.state) {
+          // Redirect to onboarding if no state set
           router.push("/onboarding");
         } else {
           router.push("/dashboard");
@@ -110,6 +114,14 @@ function LoginForm() {
                 Sign in to access your tenancy records
               </p>
             </div>
+
+            {returnTo?.startsWith("/checkout") && (
+              <div className="mb-6 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-sm text-primary text-center">
+                  Sign in to continue with your upgrade
+                </p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
@@ -184,7 +196,10 @@ function LoginForm() {
 
             <div className="mt-6 text-center text-sm">
               <span className="text-text-subtle">Don&apos;t have an account? </span>
-              <Link href="/auth/signup" className="text-primary hover:underline font-medium">
+              <Link
+                href={returnTo ? `/auth/signup?returnTo=${encodeURIComponent(returnTo)}` : "/auth/signup"}
+                className="text-primary hover:underline font-medium"
+              >
                 Sign up
               </Link>
             </div>

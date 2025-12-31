@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PublicNav } from "@/components/public-nav";
+import { createClient } from "@/lib/supabase/client";
 import {
   Shield,
   Check,
@@ -171,48 +172,33 @@ export default function PricingPage() {
     "monthly"
   );
   const [loading, setLoading] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   const yearlyDiscount = 20;
 
-  const handleCheckout = async (plan: "plus" | "pro") => {
-    setError(null);
+  // Check authentication status on mount
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsAuthenticated(!!user);
+    }
+    checkAuth();
+  }, []);
+
+  const handleUpgrade = (plan: "plus" | "pro") => {
     setLoading(plan);
 
-    try {
-      const response = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          plan,
-          interval: billingPeriod,
-        }),
-      });
+    // Build the checkout URL with plan and interval
+    const checkoutUrl = `/checkout?plan=${plan}&interval=${billingPeriod}`;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        // If user is not logged in, redirect to signup
-        if (response.status === 401) {
-          router.push(`/auth/signup?redirect=/pricing&plan=${plan}`);
-          return;
-        }
-        throw new Error(data.error || "Failed to create checkout session");
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL received");
-      }
-    } catch (err: any) {
-      const errorMessage = err.message || "An error occurred. Please try again.";
-      setError(errorMessage);
-      setLoading(null);
-      // Scroll to top to show error
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (isAuthenticated) {
+      // User is signed in - go directly to checkout page
+      router.push(checkoutUrl);
+    } else {
+      // User is NOT signed in - redirect to sign-in with returnTo
+      const returnTo = encodeURIComponent(checkoutUrl);
+      router.push(`/auth/login?returnTo=${returnTo}`);
     }
   };
 
@@ -295,17 +281,6 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Error Message */}
-        {error && (
-          <section className="pb-4">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-red-400 text-sm text-center">
-                {error}
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* Pricing Cards */}
         <section className="pb-16 lg:pb-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -372,7 +347,7 @@ export default function PricingPage() {
                     </Button>
                   ) : (
                     <Button
-                      onClick={() => handleCheckout(key as "plus" | "pro")}
+                      onClick={() => handleUpgrade(key as "plus" | "pro")}
                       disabled={loading !== null}
                       variant={plan.ctaVariant}
                       className={`w-full h-12 font-bold ${

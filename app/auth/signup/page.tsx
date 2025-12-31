@@ -13,13 +13,15 @@ import { Shield, Loader2, CheckCircle2 } from "lucide-react";
 function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams?.get("redirect");
-  const selectedPlan = searchParams?.get("plan");
+  const returnTo = searchParams?.get("returnTo");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Check if this is a checkout flow
+  const isCheckoutFlow = returnTo?.startsWith("/checkout");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,19 +52,16 @@ function SignUpForm() {
         // Email confirmation required
         setError(null);
         // Store redirect info for after email confirmation
-        if (redirectTo || selectedPlan) {
-          localStorage.setItem("postAuthRedirect", redirectTo || "/settings");
-          if (selectedPlan) {
-            localStorage.setItem("postAuthPlan", selectedPlan);
-          }
+        if (returnTo) {
+          localStorage.setItem("postAuthRedirect", returnTo);
         }
         router.push("/auth/login?message=check_email");
       } else if (data.session) {
         // Auto-signed in
         router.refresh();
-        // If user came from pricing page, redirect to settings to complete checkout
-        if (redirectTo || selectedPlan) {
-          router.push("/settings");
+        // Redirect to returnTo if provided, otherwise onboarding
+        if (returnTo) {
+          router.push(returnTo);
         } else {
           router.push("/onboarding");
         }
@@ -95,16 +94,16 @@ function SignUpForm() {
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-white mb-2">Create your account</h1>
               <p className="text-text-subtle text-sm">
-                {selectedPlan
-                  ? `Sign up to upgrade to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}`
+                {isCheckoutFlow
+                  ? "Sign up to continue with your upgrade"
                   : "Start organising your tenancy records"}
               </p>
             </div>
 
-            {selectedPlan && (
+            {isCheckoutFlow && (
               <div className="mb-6 p-3 rounded-lg bg-primary/10 border border-primary/20">
                 <p className="text-sm text-primary text-center">
-                  After signing up, you&apos;ll be able to complete your upgrade to {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
+                  After signing up, you&apos;ll continue to checkout
                 </p>
               </div>
             )}
@@ -177,7 +176,10 @@ function SignUpForm() {
 
             <div className="mt-6 text-center text-sm">
               <span className="text-text-subtle">Already have an account? </span>
-              <Link href="/auth/login" className="text-primary hover:underline font-medium">
+              <Link
+                href={returnTo ? `/auth/login?returnTo=${encodeURIComponent(returnTo)}` : "/auth/login"}
+                className="text-primary hover:underline font-medium"
+              >
                 Sign in
               </Link>
             </div>
