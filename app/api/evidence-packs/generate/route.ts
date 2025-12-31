@@ -30,11 +30,19 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const { count: packsThisMonth } = await supabase
+    const { count: packsThisMonth, error: countError } = await supabase
       .from("evidence_pack_runs")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
       .gte("created_at", firstDayOfMonth.toISOString());
+
+    if (countError) {
+      console.error("Error counting packs this month:", countError);
+      // Wrap Supabase error in Error object so it's properly handled
+      const error = new Error(countError.message || "Failed to count packs");
+      (error as any).code = countError.code;
+      throw error;
+    }
 
     const limitCheck = await checkLimit(
       user.id,
@@ -60,11 +68,19 @@ export async function POST(request: NextRequest) {
     const enforceLimits = process.env.ENFORCE_LIMITS === 'true';
     if (enforceLimits) {
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const { count: packsToday } = await supabase
+      const { count: packsToday, error: dailyCountError } = await supabase
         .from("evidence_pack_runs")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
         .gte("created_at", todayStart.toISOString());
+
+      if (dailyCountError) {
+        console.error("Error counting packs today:", dailyCountError);
+        // Wrap Supabase error in Error object so it's properly handled
+        const error = new Error(dailyCountError.message || "Failed to count packs today");
+        (error as any).code = dailyCountError.code;
+        throw error;
+      }
 
       // Conservative daily cap: 10 packs per day (applies to all users regardless of plan)
       // This prevents abuse even if billing system has issues
@@ -249,13 +265,18 @@ export async function POST(request: NextRequest) {
     });
 
     // Check for previous pack versions
-    const { data: previousPacks } = await supabase
+    const { data: previousPacks, error: previousPacksError } = await supabase
       .from("evidence_pack_runs")
       .select("created_at")
       .in("issue_id", issueIds)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1);
+
+    if (previousPacksError) {
+      console.error("Error fetching previous packs:", previousPacksError);
+      // Don't throw - this is optional metadata
+    }
 
     const previousVersionDate = previousPacks && previousPacks.length > 0 
       ? previousPacks[0].created_at 
@@ -354,7 +375,23 @@ export async function POST(request: NextRequest) {
       to_date: defaultToDate,
     }));
 
-    await supabase.from("evidence_pack_runs").insert(packRunRecords);
+    const { error: insertError } = await supabase
+      .from("evidence_pack_runs")
+      .insert(packRunRecords);
+
+    if (insertError) {
+      console.error("Error inserting pack run records:", {
+        error: insertError,
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        records: packRunRecords,
+      });
+      // Log the error but don't fail the request - PDF was already generated and uploaded
+      // The pack can still be downloaded, we just won't have a record of it
+      // In production, you might want to log this to a monitoring service
+    }
 
     // Return download URL with metadata
     return NextResponse.json({

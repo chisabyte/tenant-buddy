@@ -92,7 +92,14 @@ export function handleApiError(error: unknown): NextResponse<ErrorResponse> {
         );
 
       default:
-        // Don't expose Supabase error details
+        // Log the actual error for debugging (server-side only)
+        console.error('Supabase error details:', {
+          code: supabaseError.code,
+          message: supabaseError.message,
+          details: supabaseError.details,
+          hint: supabaseError.hint,
+        });
+        // Don't expose Supabase error details to client
         return NextResponse.json(
           {
             error: 'Database operation failed',
