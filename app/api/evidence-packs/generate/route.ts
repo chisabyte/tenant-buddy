@@ -31,11 +31,29 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const { count: packsThisMonth, error: countError } = await supabase
-      .from("evidence_pack_runs")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .gte("generated_at", firstDayOfMonth.toISOString());
+    // Backward-compatible: new schema uses generated_at, legacy uses created_at
+    let packsThisMonth: number | null = null;
+    let countError: any = null;
+    {
+      const res = await supabase
+        .from("evidence_pack_runs")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("generated_at", firstDayOfMonth.toISOString());
+      packsThisMonth = res.count ?? null;
+      countError = res.error ?? null;
+
+      // Fallback for pre-migration DBs (generated_at column doesn't exist)
+      if (countError && (countError.code === "42703" || String(countError.message || "").includes("generated_at"))) {
+        const legacyRes = await supabase
+          .from("evidence_pack_runs")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .gte("created_at", firstDayOfMonth.toISOString());
+        packsThisMonth = legacyRes.count ?? null;
+        countError = legacyRes.error ?? null;
+      }
+    }
 
     if (countError) {
       console.error("Error counting packs this month:", countError);
@@ -69,11 +87,28 @@ export async function POST(request: NextRequest) {
     const enforceLimits = process.env.ENFORCE_LIMITS === 'true';
     if (enforceLimits) {
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const { count: packsToday, error: dailyCountError } = await supabase
-        .from("evidence_pack_runs")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .gte("generated_at", todayStart.toISOString());
+      // Backward-compatible: new schema uses generated_at, legacy uses created_at
+      let packsToday: number | null = null;
+      let dailyCountError: any = null;
+      {
+        const res = await supabase
+          .from("evidence_pack_runs")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .gte("generated_at", todayStart.toISOString());
+        packsToday = res.count ?? null;
+        dailyCountError = res.error ?? null;
+
+        if (dailyCountError && (dailyCountError.code === "42703" || String(dailyCountError.message || "").includes("generated_at"))) {
+          const legacyRes = await supabase
+            .from("evidence_pack_runs")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .gte("created_at", todayStart.toISOString());
+          packsToday = legacyRes.count ?? null;
+          dailyCountError = legacyRes.error ?? null;
+        }
+      }
 
       if (dailyCountError) {
         console.error("Error counting packs today:", dailyCountError);
@@ -385,23 +420,45 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    // Check for previous pack versions
-    const { data: previousPacks, error: previousPacksError } = await supabase
-      .from("evidence_pack_runs")
-      .select("generated_at")
-      .overlaps("issue_ids", issueIds)
-      .eq("user_id", user.id)
-      .order("generated_at", { ascending: false })
-      .limit(1);
+    // Check for previous pack versions (optional metadata)
+    // Backward compatible: new schema uses issue_ids + generated_at, legacy uses issue_id + created_at
+    let previousVersionDate: string | undefined = undefined;
+    {
+      const res = await supabase
+        .from("evidence_pack_runs")
+        .select("generated_at")
+        .overlaps("issue_ids", issueIds)
+        .eq("user_id", user.id)
+        .order("generated_at", { ascending: false })
+        .limit(1);
 
-    if (previousPacksError) {
-      console.error("Error fetching previous packs:", previousPacksError);
-      // Don't throw - this is optional metadata
+      if (res.error) {
+        const code = (res.error as any).code;
+        const msg = String((res.error as any).message || "");
+        const looksLikePreMigration = code === "42703" || msg.includes("issue_ids") || msg.includes("generated_at");
+
+        console.error("Error fetching previous packs (new schema):", res.error);
+
+        if (looksLikePreMigration) {
+          const legacyRes = await supabase
+            .from("evidence_pack_runs")
+            .select("created_at")
+            .in("issue_id", issueIds)
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          if (legacyRes.error) {
+            console.error("Error fetching previous packs (legacy schema):", legacyRes.error);
+          } else {
+            previousVersionDate =
+              legacyRes.data && legacyRes.data.length > 0 ? (legacyRes.data[0] as any).created_at : undefined;
+          }
+        }
+      } else {
+        previousVersionDate = res.data && res.data.length > 0 ? (res.data[0] as any).generated_at : undefined;
+      }
     }
-
-    const previousVersionDate = previousPacks && previousPacks.length > 0 
-      ? previousPacks[0].generated_at 
-      : undefined;
 
     // Prepare v2 data structure with mode and image buffers
     const packData: EvidencePackV2Data = {
@@ -497,38 +554,76 @@ export async function POST(request: NextRequest) {
     }
 
     // Save pack run record (ONE row per pack) - idempotent via pack_key upsert
-    // On repeated generation with same inputs, this updates the existing record instead of creating duplicates.
-    const { error: upsertError } = await supabase
-      .from("evidence_pack_runs")
-      .upsert(
-        {
-          user_id: user.id,
-          property_id: property.id,
-          pack_key,
-          mode: (mode as EvidencePackMode) || "concise",
-          issue_ids: sortedIssueIds,
-          from_date: defaultFromDate,
-          to_date: defaultToDate,
-          pdf_path: filePath,
-          generated_at: now.toISOString(),
-          // Optional metadata (columns may exist in future; safe to ignore if not selected)
-          // pdf_sha256,
-        } as any,
-        { onConflict: "user_id,property_id,pack_key" }
-      );
+    // Backward compatible: if DB migration isn't applied yet, fall back to legacy per-issue inserts.
+    let persistedAs: "idempotent" | "legacy" = "idempotent";
+    {
+      const { error: upsertError } = await supabase
+        .from("evidence_pack_runs")
+        .upsert(
+          {
+            user_id: user.id,
+            property_id: property.id,
+            pack_key,
+            mode: (mode as EvidencePackMode) || "concise",
+            issue_ids: sortedIssueIds,
+            from_date: defaultFromDate,
+            to_date: defaultToDate,
+            pdf_path: filePath,
+            generated_at: now.toISOString(),
+          } as any,
+          { onConflict: "user_id,property_id,pack_key" }
+        );
 
-    if (upsertError) {
-      console.error("Error upserting pack run record:", {
-        error: upsertError,
-        code: (upsertError as any).code,
-        message: (upsertError as any).message,
-        details: (upsertError as any).details,
-        hint: (upsertError as any).hint,
-        pack_key,
-        property_id: property.id,
-        issue_ids: sortedIssueIds,
-      });
-      // Log only; PDF is already generated + uploaded.
+      if (upsertError) {
+        const msg = String((upsertError as any).message || "");
+        const code = (upsertError as any).code;
+        const looksLikePreMigration =
+          code === "42703" || // undefined_column
+          msg.includes("property_id") ||
+          msg.includes("pack_key") ||
+          msg.includes("issue_ids") ||
+          msg.includes("generated_at") ||
+          msg.includes("on conflict") ||
+          msg.includes("evidence_pack_runs_user_property_pack_key_unique");
+
+        console.error("Error upserting pack run record:", {
+          error: upsertError,
+          code,
+          message: msg,
+          details: (upsertError as any).details,
+          hint: (upsertError as any).hint,
+          pack_key,
+          property_id: property.id,
+          issue_ids: sortedIssueIds,
+          looksLikePreMigration,
+        });
+
+        // Fallback: legacy DB schema (one row per issue)
+        if (looksLikePreMigration) {
+          persistedAs = "legacy";
+          const packRunRecords = issueIds.map((issueId) => ({
+            user_id: user.id,
+            issue_id: issueId,
+            pdf_path: filePath,
+            from_date: defaultFromDate,
+            to_date: defaultToDate,
+          }));
+
+          const { error: insertError } = await supabase
+            .from("evidence_pack_runs")
+            .insert(packRunRecords);
+
+          if (insertError) {
+            console.error("Legacy insert also failed (pack already uploaded):", {
+              error: insertError,
+              code: (insertError as any).code,
+              message: (insertError as any).message,
+              details: (insertError as any).details,
+              hint: (insertError as any).hint,
+            });
+          }
+        }
+      }
     }
 
     // Return download URL with metadata
@@ -555,6 +650,7 @@ export async function POST(request: NextRequest) {
       version: "2.0",
       pack_key,
       pdf_sha256,
+      persistedAs,
     });
   } catch (error) {
     return handleApiError(error);
