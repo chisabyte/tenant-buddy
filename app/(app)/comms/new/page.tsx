@@ -16,6 +16,11 @@ interface Property {
   address_text: string;
 }
 
+interface Issue {
+  id: string;
+  title: string;
+}
+
 function NewCommsForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -33,6 +38,7 @@ function NewCommsForm() {
   const [summary, setSummary] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<Issue | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -41,6 +47,7 @@ function NewCommsForm() {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
+        // Fetch properties
         const { data: props } = await supabase
           .from("properties")
           .select("id, address_text")
@@ -51,10 +58,24 @@ function NewCommsForm() {
             setPropertyId(props[0].id);
           }
         }
+
+        // Fetch issue if issueId is present
+        if (issueId) {
+          const { data: issueData } = await supabase
+            .from("issues")
+            .select("id, title")
+            .eq("id", issueId)
+            .eq("user_id", user.id)
+            .single();
+          
+          if (issueData) {
+            setIssue(issueData);
+          }
+        }
       }
     }
     fetchData();
-  }, []);
+  }, [issueId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,6 +228,8 @@ function NewCommsForm() {
               </Label>
               <AIDraftHelper
                 propertyAddress={properties.find(p => p.id === propertyId)?.address_text}
+                issueId={issue?.id}
+                issueTitle={issue?.title}
                 onUseDraft={(draft) => setSummary(draft)}
               />
             </div>

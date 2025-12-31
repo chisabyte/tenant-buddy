@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,8 @@ import { Sparkles, Loader2, Copy, Check, AlertCircle } from "lucide-react";
 
 interface AIDraftHelperProps {
   propertyAddress?: string;
+  issueId?: string;
+  issueTitle?: string;
   onUseDraft: (draft: string) => void;
 }
 
@@ -34,7 +36,7 @@ interface GeneratedDraft {
   suggestions?: string[];
 }
 
-export function AIDraftHelper({ propertyAddress, onUseDraft }: AIDraftHelperProps) {
+export function AIDraftHelper({ propertyAddress, issueId, issueTitle, onUseDraft }: AIDraftHelperProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"form" | "result">("form");
   const [loading, setLoading] = useState(false);
@@ -46,6 +48,30 @@ export function AIDraftHelper({ propertyAddress, onUseDraft }: AIDraftHelperProp
   const [recipient, setRecipient] = useState("");
   const [subject, setSubject] = useState("");
   const [contextDetails, setContextDetails] = useState("");
+
+  // Prefill subject when modal opens with issue context
+  // Only set once when modal opens and issueTitle is available
+  const [hasPrefilled, setHasPrefilled] = useState(false);
+  const [userEditedSubject, setUserEditedSubject] = useState(false);
+  
+  useEffect(() => {
+    if (open && issueTitle && !hasPrefilled && !subject) {
+      // Prefill with issue title, optionally prefix with draft type if it's a Repair Request
+      const defaultSubject = draftType === "Repair Request" 
+        ? `${draftType}: ${issueTitle}`
+        : issueTitle;
+      setSubject(defaultSubject);
+      setHasPrefilled(true);
+    }
+  }, [open, issueTitle, hasPrefilled, subject, draftType]);
+
+  // Track if user manually edits the subject
+  const handleSubjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSubject(e.target.value);
+    if (!userEditedSubject) {
+      setUserEditedSubject(true);
+    }
+  };
 
   // Result state
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedDraft | null>(null);
@@ -104,8 +130,11 @@ export function AIDraftHelper({ propertyAddress, onUseDraft }: AIDraftHelperProp
     setError(null);
     setDraftType("Repair Request");
     setRecipient("");
+    // Reset subject, but allow it to be prefilled again on next open
     setSubject("");
     setContextDetails("");
+    setHasPrefilled(false);
+    setUserEditedSubject(false);
   };
 
   return (
@@ -173,7 +202,7 @@ export function AIDraftHelper({ propertyAddress, onUseDraft }: AIDraftHelperProp
                   <Input
                     id="subject"
                     value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
+                    onChange={handleSubjectChange}
                     placeholder="e.g., Leaking tap in bathroom"
                     className="h-11 bg-background-dark border-card-lighter text-white placeholder:text-text-subtle"
                   />
