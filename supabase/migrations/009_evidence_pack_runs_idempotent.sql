@@ -55,9 +55,9 @@ WITH grouped AS (
     to_date,
     -- All issues included in that generated PDF
     array_agg(DISTINCT issue_id ORDER BY issue_id) AS issue_ids,
-    -- All issues in a pack should share the same property
-    MIN(property_id) AS property_id,
-    MIN(mode) AS mode,
+    -- All issues in a pack should share the same property; use array_agg + subscript (MIN doesn't work on UUID)
+    (array_agg(property_id ORDER BY created_at DESC))[1] AS property_id,
+    (array_agg(mode ORDER BY created_at DESC))[1] AS mode,
     MAX(created_at) AS generated_at
   FROM evidence_pack_runs
   WHERE pdf_path IS NOT NULL
