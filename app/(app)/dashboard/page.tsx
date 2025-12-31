@@ -11,12 +11,11 @@ import {
   Upload,
   Mail,
   FileText,
-  Lightbulb,
   Image as ImageIcon,
-  FileCheck,
   Crown,
 } from "lucide-react";
 import { format } from "date-fns";
+import { DashboardInsightPanel } from "@/components/dashboard-insight-panel";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -47,20 +46,59 @@ export default async function DashboardPage() {
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id);
 
-  // Get active issues for the table
-  const { data: activeIssues } = await supabase
+  // Get all issues with severity for insights
+  const { data: allIssues } = await supabase
     .from("issues")
     .select(`
       id,
       title,
       status,
+      severity,
       created_at,
+      updated_at,
       properties!inner(address_text)
     `)
     .eq("user_id", user.id)
-    .in("status", ["open", "in_progress"])
-    .order("created_at", { ascending: false })
-    .limit(5);
+    .order("created_at", { ascending: false });
+
+  // Get active issues for the table (first 5)
+  const activeIssues = allIssues?.filter(
+    (i) => i.status === "open" || i.status === "in_progress"
+  ).slice(0, 5);
+
+  // Get evidence counts per issue for insights
+  const { data: evidenceItems } = await supabase
+    .from("evidence_items")
+    .select("issue_id")
+    .eq("user_id", user.id)
+    .not("issue_id", "is", null);
+
+  const evidenceCountMap = new Map<string, number>();
+  evidenceItems?.forEach((item) => {
+    if (item.issue_id) {
+      evidenceCountMap.set(
+        item.issue_id,
+        (evidenceCountMap.get(item.issue_id) || 0) + 1
+      );
+    }
+  });
+
+  // Get comms counts per issue for insights
+  const { data: commsItems } = await supabase
+    .from("comms_logs")
+    .select("issue_id")
+    .eq("user_id", user.id)
+    .not("issue_id", "is", null);
+
+  const commsCountMap = new Map<string, number>();
+  commsItems?.forEach((item) => {
+    if (item.issue_id) {
+      commsCountMap.set(
+        item.issue_id,
+        (commsCountMap.get(item.issue_id) || 0) + 1
+      );
+    }
+  });
 
   // Get user's first name from email
   const userName = user.email?.split("@")[0] || "there";
@@ -339,30 +377,12 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Promo/Tip Card */}
-          <div className="relative p-6 rounded-xl overflow-hidden bg-card-dark border border-primary/30">
-            <div className="relative z-10 flex flex-col gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-background-dark mb-1">
-                <Lightbulb className="h-5 w-5" />
-              </div>
-              <h3 className="text-white text-lg font-bold">Renting Tip</h3>
-              <p className="text-gray-300 text-sm leading-relaxed">
-                Did you know? In Victoria, you must be given at least 24 hours
-                notice before an inspection. Keep your &quot;Entry Notice&quot; emails
-                saved in the locker.
-              </p>
-              <a 
-                href="/terms" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary text-sm font-bold text-left hover:text-white transition-colors mt-2 inline-block"
-              >
-                Read Tenant Rights →
-              </a>
-            </div>
-            {/* Abstract decoration */}
-            <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-          </div>
+          {/* System Insight Panel - Data-driven actionable insights */}
+          <DashboardInsightPanel
+            issues={allIssues || []}
+            evidenceCounts={Object.fromEntries(evidenceCountMap)}
+            commsCounts={Object.fromEntries(commsCountMap)}
+          />
         </div>
       </div>
 

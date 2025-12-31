@@ -12,6 +12,7 @@ import {
   Calendar,
   ChevronRight,
 } from "lucide-react";
+import { IssueActions } from "@/components/issue-actions";
 
 export default async function IssueDetailPage({
   params,
@@ -96,7 +97,7 @@ export default async function IssueDetailPage({
           </div>
         )}
 
-        <div className="flex flex-wrap gap-4 text-xs text-text-subtle border-t border-card-lighter pt-4">
+        <div className="flex flex-wrap gap-4 text-xs text-text-subtle border-t border-card-lighter pt-4 mb-4">
           <div className="flex items-center gap-2">
             <Calendar className="h-3.5 w-3.5" />
             Created: {new Date(issue.created_at).toLocaleDateString("en-AU")}
@@ -105,6 +106,15 @@ export default async function IssueDetailPage({
             <Calendar className="h-3.5 w-3.5" />
             Updated: {new Date(issue.updated_at).toLocaleDateString("en-AU")}
           </div>
+        </div>
+
+        {/* Issue Actions - Status Change & Delete */}
+        <div className="border-t border-card-lighter pt-4">
+          <IssueActions
+            issueId={issue.id}
+            issueTitle={issue.title}
+            currentStatus={issue.status}
+          />
         </div>
       </div>
 
