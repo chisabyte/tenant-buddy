@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { issueSchema } from "@/lib/validations";
+import { calculateSeverity } from "@/lib/severity";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 
 interface Property {
@@ -81,12 +82,17 @@ export default function NewIssuePage() {
         throw new Error("You must be logged in");
       }
 
+      // Calculate severity based on title and description
+      // This is persisted at creation time and NEVER automatically downgraded
+      const severity = calculateSeverity(title, description);
+
       const { error: insertError } = await supabase.from("issues").insert({
         user_id: user.id,
         property_id: propertyId,
         title,
         description: description || null,
         status: "open",
+        severity,
       });
 
       if (insertError) {

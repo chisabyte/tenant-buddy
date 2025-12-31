@@ -7,12 +7,14 @@ import Link from "next/link";
 import { Plus, Upload, Filter, ChevronDown, SortAsc, MoreVertical, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import type { IssueStatus } from "@/lib/database.types";
+import { getDisplaySeverity, getSeverityColor, type Severity } from "@/lib/severity";
 
 interface Issue {
   id: string;
   title: string;
   description: string | null;
   status: IssueStatus;
+  severity: Severity;
   created_at: string;
   updated_at: string;
   properties: { address_text: string; state: string }[];
@@ -39,7 +41,7 @@ export default function IssuesPage() {
       return;
     }
 
-    // Get all issues
+    // Get all issues including severity
     const { data: issuesData, error } = await supabase
       .from("issues")
       .select(`
@@ -47,6 +49,7 @@ export default function IssuesPage() {
         title,
         description,
         status,
+        severity,
         created_at,
         updated_at,
         properties!inner(address_text, state)
@@ -335,7 +338,13 @@ export default function IssuesPage() {
                   const referenceId = issue.id.substring(0, 8).toUpperCase();
                   const loggedDate = format(new Date(issue.created_at), "MMM d, yyyy");
 
-                  const severity = getSeverity(issue);
+                  // Use stored severity with age-based escalation for active issues
+                  // Severity NEVER downgrades - resolved issues keep their original severity
+                  const displaySeverity = getDisplaySeverity(
+                    issue.severity || "Low",
+                    issue.created_at,
+                    issue.status
+                  );
 
                   return (
                     <tr
@@ -357,9 +366,9 @@ export default function IssuesPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getSeverityClasses(severity)}`}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getSeverityColor(displaySeverity)}`}
                         >
-                          {severity}
+                          {displaySeverity}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -458,43 +467,6 @@ export default function IssuesPage() {
       </div>
     </div>
   );
-}
-
-function getSeverity(issue: { status: string; created_at: string }): "Urgent" | "High" | "Medium" | "Low" {
-  const status = issue.status;
-
-  // Resolved/closed issues are always Low priority
-  if (status === "resolved" || status === "closed") {
-    return "Low";
-  }
-
-  // For open/in_progress issues, calculate based on age
-  const createdDate = new Date(issue.created_at);
-  const now = new Date();
-  const daysOld = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-
-  // Issues waiting on agent response for a while become more urgent
-  if (status === "in_progress") {
-    if (daysOld > 14) return "Urgent";
-    if (daysOld > 7) return "High";
-    return "Medium";
-  }
-
-  // Open issues - severity increases with age
-  if (daysOld > 30) return "Urgent";
-  if (daysOld > 14) return "High";
-  if (daysOld > 7) return "Medium";
-  return "Low";
-}
-
-function getSeverityClasses(severity: string): string {
-  const classes: Record<string, string> = {
-    Urgent: "bg-red-500/20 text-red-400",
-    High: "bg-orange-500/20 text-orange-400",
-    Medium: "bg-amber-500/20 text-amber-400",
-    Low: "bg-slate-700 text-slate-300",
-  };
-  return classes[severity] || classes.Low;
 }
 
 function getStatusClasses(status: IssueStatus): string {
