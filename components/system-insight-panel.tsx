@@ -255,45 +255,46 @@ export function SystemInsightPanel({
     }
   };
 
-  const getBorderColor = () => {
-    switch (currentInsight.type) {
-      case "urgent":
-        return "border-red-500/30";
-      case "warning":
-        return "border-amber-500/30";
-      case "info":
-        return "border-primary/30";
-      default:
-        return "border-card-lighter";
-    }
-  };
-
   return (
-    <div
-      className={`rounded-xl bg-card-dark border ${getBorderColor()} p-4 transition-opacity duration-300 ${
-        isVisible ? "opacity-100" : "opacity-0"
-      }`}
-    >
+    <div className="rounded-xl bg-card-dark border border-card-lighter p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="mt-0.5 shrink-0">{getIcon()}</div>
+          <div
+            className={`mt-0.5 shrink-0 transition-opacity duration-300 ${
+              isVisible ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {getIcon()}
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-text-subtle uppercase tracking-wide mb-1">
               System Insight
             </p>
-            <p className="text-sm text-white">{currentInsight.message}</p>
+            <p
+              className={`text-sm text-white transition-opacity duration-300 ${
+                isVisible ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {currentInsight.message}
+            </p>
           </div>
         </div>
 
-        {currentInsight.cta && (
-          <Link
-            href={currentInsight.cta.href}
-            className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-          >
-            {currentInsight.cta.label}
-            <ArrowRight className="h-3 w-3" />
-          </Link>
-        )}
+        <div
+          className={`transition-opacity duration-300 ${
+            isVisible ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {currentInsight.cta && (
+            <Link
+              href={currentInsight.cta.href}
+              className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              {currentInsight.cta.label}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Progress indicator for multiple insights */}
