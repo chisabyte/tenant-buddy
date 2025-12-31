@@ -49,21 +49,37 @@ export function AIDraftHelper({ propertyAddress, issueId, issueTitle, onUseDraft
   const [subject, setSubject] = useState("");
   const [contextDetails, setContextDetails] = useState("");
 
-  // Prefill subject when modal opens with issue context
-  // Only set once when modal opens and issueTitle is available
-  const [hasPrefilled, setHasPrefilled] = useState(false);
+  // Track if user has manually edited the subject
   const [userEditedSubject, setUserEditedSubject] = useState(false);
   
+  // Prefill subject when modal opens with issue context
+  // Uses a ref to track if we've attempted prefill for this modal session
+  const [prefillAttempted, setPrefillAttempted] = useState(false);
+  
+  // Effect 1: Reset prefill state when modal closes
   useEffect(() => {
-    if (open && issueTitle && !hasPrefilled && !subject) {
-      // Prefill with issue title, optionally prefix with draft type if it's a Repair Request
+    if (!open) {
+      setPrefillAttempted(false);
+      setUserEditedSubject(false);
+    }
+  }, [open]);
+  
+  // Effect 2: Prefill subject when modal is open AND we have issue context AND haven't prefilled yet
+  useEffect(() => {
+    // Only prefill if:
+    // 1. Modal is open
+    // 2. We have an issue title
+    // 3. Haven't attempted prefill this session
+    // 4. User hasn't manually edited the subject
+    // 5. Subject is currently empty
+    if (open && issueTitle && !prefillAttempted && !userEditedSubject && !subject) {
       const defaultSubject = draftType === "Repair Request" 
         ? `${draftType}: ${issueTitle}`
         : issueTitle;
       setSubject(defaultSubject);
-      setHasPrefilled(true);
+      setPrefillAttempted(true);
     }
-  }, [open, issueTitle, hasPrefilled, subject, draftType]);
+  }, [open, issueTitle, prefillAttempted, userEditedSubject, subject, draftType]);
 
   // Track if user manually edits the subject
   const handleSubjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,8 +149,7 @@ export function AIDraftHelper({ propertyAddress, issueId, issueTitle, onUseDraft
     // Reset subject, but allow it to be prefilled again on next open
     setSubject("");
     setContextDetails("");
-    setHasPrefilled(false);
-    setUserEditedSubject(false);
+    // Note: prefillAttempted and userEditedSubject are reset via the useEffect when open becomes false
   };
 
   return (

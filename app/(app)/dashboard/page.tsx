@@ -366,19 +366,20 @@ export default async function DashboardPage() {
                     href={`/issues/${issue.id}`}
                     className="block p-4 rounded-xl bg-card-dark border border-card-lighter hover:border-primary/50 transition-colors group"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-2 mb-1">
+                    <div className="flex items-start justify-between gap-3">
+                      {/* Left side: Title and metadata - takes remaining space, can shrink */}
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-start gap-2 mb-1 min-w-0">
                           {isHighSeverity && (
                             <span className="text-xs font-medium text-red-400 shrink-0">
                               {issue.severity}
                             </span>
                           )}
-                          <h3 className="text-white font-medium line-clamp-2 group-hover:text-primary transition-colors flex-1 min-w-0">
+                          <h3 className="text-white font-medium group-hover:text-primary transition-colors min-w-0 break-words line-clamp-2">
                             {issue.title}
                           </h3>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-text-subtle">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-subtle">
                           <span>
                             {daysOld === 0
                               ? "Today"
@@ -386,24 +387,25 @@ export default async function DashboardPage() {
                               ? "Yesterday"
                               : `${daysOld} days ago`}
                           </span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span>
                             {evidenceCount} evidence
                           </span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span>{commsCount} comms</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
+                      {/* Right side: Status badge and arrow - never shrinks, stays visible */}
+                      <div className="flex items-center gap-2 shrink-0 self-start mt-0.5">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusConfig.classes} whitespace-nowrap`}
+                          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.classes} whitespace-nowrap max-w-[140px] sm:max-w-none`}
                         >
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`}
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusConfig.dotColor}`}
                           />
-                          {statusConfig.label}
+                          <span className="truncate">{statusConfig.label}</span>
                         </span>
-                        <ArrowRight className="h-4 w-4 text-text-subtle group-hover:text-primary transition-colors shrink-0" />
+                        <ArrowRight className="h-4 w-4 text-text-subtle group-hover:text-primary transition-colors shrink-0 hidden sm:block" />
                       </div>
                     </div>
                   </Link>

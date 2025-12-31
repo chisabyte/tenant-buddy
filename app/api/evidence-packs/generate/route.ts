@@ -156,20 +156,50 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // SANITY CHECK (dev-only): Verify evidence count
+    // SANITY CHECK: Verify evidence counts and warn on potential issues
+    // Always log in dev, warn in production if data seems wrong
+    const evidenceByIssue = new Map<string, number>();
+    (evidence || []).forEach(e => {
+      if (e.issue_id) {
+        evidenceByIssue.set(e.issue_id, (evidenceByIssue.get(e.issue_id) || 0) + 1);
+      }
+    });
+    
     if (process.env.NODE_ENV === 'development') {
-      const evidenceByIssue = new Map<string, number>();
-      (evidence || []).forEach(e => {
-        if (e.issue_id) {
-          evidenceByIssue.set(e.issue_id, (evidenceByIssue.get(e.issue_id) || 0) + 1);
-        }
-      });
       console.log('[PDF] Evidence counts by issue:', Object.fromEntries(evidenceByIssue));
       console.log('[PDF] Total evidence in date range:', evidence?.length || 0);
+    }
+    
+    // CRITICAL: Warn if we have issues but no evidence (might indicate date range issue)
+    if (issueIds.length > 0 && (evidence?.length || 0) === 0) {
+      console.warn('[PDF] WARNING: No evidence found for issues in date range:', defaultFromDate, 'to', defaultToDate);
+      console.warn('[PDF] This may indicate evidence exists outside the date range. Issue IDs:', issueIds);
       
-      // Warn if we have issues but no evidence (might indicate date range issue)
-      if (issueIds.length > 0 && (evidence?.length || 0) === 0) {
-        console.warn('[PDF] WARNING: No evidence found for issues. Date range:', defaultFromDate, 'to', defaultToDate);
+      // Fetch total evidence count without date filter to compare
+      const { count: totalEvidenceCount } = await supabase
+        .from("evidence_items")
+        .select("*", { count: "exact", head: true })
+        .in("issue_id", issueIds)
+        .eq("user_id", user.id);
+      
+      if (totalEvidenceCount && totalEvidenceCount > 0) {
+        console.warn(`[PDF] MISMATCH: ${totalEvidenceCount} evidence items exist but 0 in date range. Expanding date range to include all evidence.`);
+        // Re-fetch evidence without date filter to include all
+        const { data: allEvidence } = await supabase
+          .from("evidence_items")
+          .select("id, type, category, note, occurred_at, sha256, issue_id, uploaded_at, file_path")
+          .in("issue_id", issueIds)
+          .eq("user_id", user.id)
+          .order("occurred_at", { ascending: true });
+        
+        if (allEvidence && allEvidence.length > 0) {
+          // Replace evidence with full dataset
+          evidence?.splice(0, evidence.length, ...allEvidence);
+          if (!evidence) {
+            // If evidence was null, this won't work - handled below
+            console.warn('[PDF] Evidence array was null, using allEvidence instead');
+          }
+        }
       }
     }
 
@@ -198,20 +228,44 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // SANITY CHECK (dev-only): Verify comms count
+    // SANITY CHECK: Verify comms counts and warn on potential issues
+    const commsByIssue = new Map<string, number>();
+    (comms || []).forEach(c => {
+      if (c.issue_id) {
+        commsByIssue.set(c.issue_id, (commsByIssue.get(c.issue_id) || 0) + 1);
+      }
+    });
+    
     if (process.env.NODE_ENV === 'development') {
-      const commsByIssue = new Map<string, number>();
-      (comms || []).forEach(c => {
-        if (c.issue_id) {
-          commsByIssue.set(c.issue_id, (commsByIssue.get(c.issue_id) || 0) + 1);
-        }
-      });
       console.log('[PDF] Comms counts by issue:', Object.fromEntries(commsByIssue));
       console.log('[PDF] Total comms in date range:', comms?.length || 0);
+    }
+    
+    // CRITICAL: Warn if we have issues but no comms (might indicate date range issue)
+    if (issueIds.length > 0 && (comms?.length || 0) === 0) {
+      console.warn('[PDF] WARNING: No comms found for issues in date range:', defaultFromDate, 'to', defaultToDate);
       
-      // Warn if we have issues but no comms (might indicate date range issue)
-      if (issueIds.length > 0 && (comms?.length || 0) === 0) {
-        console.warn('[PDF] WARNING: No comms found for issues. Date range:', defaultFromDate, 'to', defaultToDate);
+      // Fetch total comms count without date filter to compare
+      const { count: totalCommsCount } = await supabase
+        .from("comms_logs")
+        .select("*", { count: "exact", head: true })
+        .in("issue_id", issueIds)
+        .eq("user_id", user.id);
+      
+      if (totalCommsCount && totalCommsCount > 0) {
+        console.warn(`[PDF] MISMATCH: ${totalCommsCount} comms exist but 0 in date range. Expanding date range to include all comms.`);
+        // Re-fetch comms without date filter to include all
+        const { data: allComms } = await supabase
+          .from("comms_logs")
+          .select("id, occurred_at, channel, summary, issue_id, created_at")
+          .in("issue_id", issueIds)
+          .eq("user_id", user.id)
+          .order("occurred_at", { ascending: true });
+        
+        if (allComms && allComms.length > 0) {
+          // Replace comms with full dataset
+          comms?.splice(0, comms.length, ...allComms);
+        }
       }
     }
 
