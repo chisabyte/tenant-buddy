@@ -4,11 +4,26 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { AustralianState, STATE_RULES, STATE_INFO_DISCLAIMER } from "@/lib/state-rules";
-import { Settings, Download, Trash2, Shield, Info, FileText, CreditCard } from "lucide-react";
+import { Settings, Download, Trash2, Shield, Info, FileText, CreditCard, Check, Star, Crown } from "lucide-react";
 import Link from "next/link";
+
+// Plan data for display
+const plans = {
+  free: { name: "Free", price: 0, icon: Shield },
+  plus: { name: "Plus", price: 15, icon: Star },
+  pro: { name: "Pro", price: 29, icon: Crown },
+};
+
+type PlanId = "free" | "plus" | "pro";
+
+interface SubscriptionInfo {
+  planId: PlanId;
+  hasActiveSubscription: boolean;
+  isOwner: boolean;
+  status?: string;
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -17,12 +32,19 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo>({
+    planId: "free",
+    hasActiveSubscription: false,
+    isOwner: false,
+  });
 
   useEffect(() => {
-    async function fetchProfile() {
+    async function fetchData() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Fetch profile
         const { data: profile } = await supabase
           .from("profiles")
           .select("state")
@@ -31,9 +53,25 @@ export default function SettingsPage() {
         if (profile) {
           setState(profile.state as AustralianState);
         }
+
+        // Fetch subscription info from API
+        try {
+          const response = await fetch("/api/billing/plan");
+          if (response.ok) {
+            const data = await response.json();
+            setSubscription({
+              planId: data.planId || "free",
+              hasActiveSubscription: data.hasActiveSubscription || false,
+              isOwner: data.isOwner || false,
+              status: data.status,
+            });
+          }
+        } catch (err) {
+          console.error("Failed to fetch subscription:", err);
+        }
       }
     }
-    fetchProfile();
+    fetchData();
   }, []);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -138,6 +176,39 @@ export default function SettingsPage() {
     }
   };
 
+  const handleCheckout = async (plan: "plus" | "pro") => {
+    setCheckoutLoading(plan);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          plan,
+          interval: "monthly",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to start checkout");
+      setCheckoutLoading(null);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (
       !confirm(
@@ -230,18 +301,142 @@ export default function SettingsPage() {
           <CreditCard className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-bold text-white">Subscription</h2>
         </div>
-        <p className="text-sm text-text-subtle mb-4">
-          Manage your subscription, update payment methods, or view billing history.
-        </p>
-        <Button
-          onClick={handleManageSubscription}
-          disabled={portalLoading}
-          variant="outline"
-          className="bg-card-lighter border-card-lighter text-white hover:bg-card-lighter/80"
-        >
-          <CreditCard className="h-4 w-4 mr-2" />
-          {portalLoading ? "Loading..." : "Manage Subscription"}
-        </Button>
+
+        {/* Current Plan Display */}
+        <div className="mb-6 p-4 rounded-lg bg-background-dark border border-card-lighter">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {subscription.planId === "pro" ? (
+                <Crown className="h-5 w-5 text-yellow-400" />
+              ) : subscription.planId === "plus" ? (
+                <Star className="h-5 w-5 text-primary" />
+              ) : (
+                <Shield className="h-5 w-5 text-text-subtle" />
+              )}
+              <div>
+                <p className="font-bold text-white">
+                  {plans[subscription.planId].name} Plan
+                  {subscription.isOwner && " (Owner)"}
+                </p>
+                <p className="text-sm text-text-subtle">
+                  {subscription.isOwner
+                    ? "Full access included"
+                    : subscription.planId === "free"
+                    ? "Upgrade for more features"
+                    : `$${plans[subscription.planId].price} AUD/month`}
+                </p>
+              </div>
+            </div>
+            {subscription.planId !== "free" && !subscription.isOwner && (
+              <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                Active
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Show upgrade options if on Free plan and not owner */}
+        {subscription.planId === "free" && !subscription.isOwner && (
+          <div className="space-y-4">
+            <p className="text-sm text-text-subtle">
+              Upgrade to unlock more properties, issues, and features.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {/* Plus Plan */}
+              <div className="p-4 rounded-lg border border-card-lighter hover:border-primary/50 transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <Star className="h-4 w-4 text-primary" />
+                  <span className="font-bold text-white">Plus</span>
+                  <span className="text-sm text-text-subtle">$15/mo</span>
+                </div>
+                <ul className="text-xs text-text-subtle space-y-1 mb-3">
+                  <li className="flex items-center gap-1">
+                    <Check className="h-3 w-3 text-primary" />
+                    3 properties, 20 issues
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <Check className="h-3 w-3 text-primary" />
+                    200 evidence files
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <Check className="h-3 w-3 text-primary" />
+                    Bulk uploads & tagging
+                  </li>
+                </ul>
+                <Button
+                  onClick={() => handleCheckout("plus")}
+                  disabled={checkoutLoading !== null}
+                  size="sm"
+                  className="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold"
+                >
+                  {checkoutLoading === "plus" ? "Loading..." : "Upgrade to Plus"}
+                </Button>
+              </div>
+
+              {/* Pro Plan */}
+              <div className="p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 hover:border-yellow-500/50 transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <Crown className="h-4 w-4 text-yellow-400" />
+                  <span className="font-bold text-white">Pro</span>
+                  <span className="text-sm text-text-subtle">$29/mo</span>
+                </div>
+                <ul className="text-xs text-text-subtle space-y-1 mb-3">
+                  <li className="flex items-center gap-1">
+                    <Check className="h-3 w-3 text-yellow-400" />
+                    Unlimited everything
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <Check className="h-3 w-3 text-yellow-400" />
+                    Advanced pack layouts
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <Check className="h-3 w-3 text-yellow-400" />
+                    Priority support
+                  </li>
+                </ul>
+                <Button
+                  onClick={() => handleCheckout("pro")}
+                  disabled={checkoutLoading !== null}
+                  size="sm"
+                  variant="outline"
+                  className="w-full border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                >
+                  {checkoutLoading === "pro" ? "Loading..." : "Upgrade to Pro"}
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-text-subtle text-center">
+              <Link href="/pricing" className="text-primary hover:underline">
+                View full pricing comparison
+              </Link>
+            </p>
+          </div>
+        )}
+
+        {/* Show manage button if has active subscription */}
+        {subscription.hasActiveSubscription && !subscription.isOwner && (
+          <div className="space-y-3">
+            <p className="text-sm text-text-subtle">
+              Manage your subscription, update payment methods, or view billing history.
+            </p>
+            <Button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              variant="outline"
+              className="bg-card-lighter border-card-lighter text-white hover:bg-card-lighter/80"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              {portalLoading ? "Loading..." : "Manage Subscription"}
+            </Button>
+          </div>
+        )}
+
+        {/* Owner message */}
+        {subscription.isOwner && (
+          <p className="text-sm text-text-subtle">
+            As the app owner, you have full Pro access at no charge.
+          </p>
+        )}
       </div>
 
       {/* Data Export */}

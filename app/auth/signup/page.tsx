@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,12 @@ import { createClient } from "@/lib/supabase/client";
 import { authSchema } from "@/lib/validations";
 import { Shield, Loader2, CheckCircle2 } from "lucide-react";
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams?.get("redirect");
+  const selectedPlan = searchParams?.get("plan");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -45,11 +49,23 @@ export default function SignUpPage() {
       if (data.user && !data.session) {
         // Email confirmation required
         setError(null);
+        // Store redirect info for after email confirmation
+        if (redirectTo || selectedPlan) {
+          localStorage.setItem("postAuthRedirect", redirectTo || "/settings");
+          if (selectedPlan) {
+            localStorage.setItem("postAuthPlan", selectedPlan);
+          }
+        }
         router.push("/auth/login?message=check_email");
       } else if (data.session) {
-        // Auto-signed in, redirect to onboarding
+        // Auto-signed in
         router.refresh();
-        router.push("/onboarding");
+        // If user came from pricing page, redirect to settings to complete checkout
+        if (redirectTo || selectedPlan) {
+          router.push("/settings");
+        } else {
+          router.push("/onboarding");
+        }
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred during signup";
@@ -79,9 +95,19 @@ export default function SignUpPage() {
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-white mb-2">Create your account</h1>
               <p className="text-text-subtle text-sm">
-                Start organising your tenancy records
+                {selectedPlan
+                  ? `Sign up to upgrade to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}`
+                  : "Start organising your tenancy records"}
               </p>
             </div>
+
+            {selectedPlan && (
+              <div className="mb-6 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-sm text-primary text-center">
+                  After signing up, you&apos;ll be able to complete your upgrade to {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
+                </p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
@@ -167,5 +193,17 @@ export default function SignUpPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background-dark">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <SignUpForm />
+    </Suspense>
   );
 }
