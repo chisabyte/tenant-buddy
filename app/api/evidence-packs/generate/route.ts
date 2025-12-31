@@ -9,6 +9,7 @@ import { formatLimit } from "@/lib/billing/plans";
 import { calculatePackReadiness, type IssueForPack, type CommsForPack } from "@/lib/pack-readiness";
 import { calculateOverallHealth, type IssueHealthData } from "@/lib/case-health";
 import type { AustralianState } from "@/lib/state-rules";
+import { createHash } from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
       .from("evidence_pack_runs")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
-      .gte("created_at", firstDayOfMonth.toISOString());
+      .gte("generated_at", firstDayOfMonth.toISOString());
 
     if (countError) {
       console.error("Error counting packs this month:", countError);
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
         .from("evidence_pack_runs")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .gte("created_at", todayStart.toISOString());
+        .gte("generated_at", todayStart.toISOString());
 
       if (dailyCountError) {
         console.error("Error counting packs today:", dailyCountError);
@@ -387,10 +388,10 @@ export async function POST(request: NextRequest) {
     // Check for previous pack versions
     const { data: previousPacks, error: previousPacksError } = await supabase
       .from("evidence_pack_runs")
-      .select("created_at")
-      .in("issue_id", issueIds)
+      .select("generated_at")
+      .overlaps("issue_ids", issueIds)
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
+      .order("generated_at", { ascending: false })
       .limit(1);
 
     if (previousPacksError) {
@@ -399,7 +400,7 @@ export async function POST(request: NextRequest) {
     }
 
     const previousVersionDate = previousPacks && previousPacks.length > 0 
-      ? previousPacks[0].created_at 
+      ? previousPacks[0].generated_at 
       : undefined;
 
     // Prepare v2 data structure with mode and image buffers
@@ -456,6 +457,15 @@ export async function POST(request: NextRequest) {
     // Generate PDF with specified mode
     const pdfBuffer = await generateEvidencePackPDF(packData);
 
+    // Compute deterministic pack_key (idempotency key)
+    // Includes all inputs that affect output: property_id, mode, date range, selected issue IDs (sorted)
+    const sortedIssueIds = [...issueIds].sort();
+    const packKeySource = `${property.id}:${mode}:${defaultFromDate}:${defaultToDate}:${sortedIssueIds.join(",")}`;
+    const pack_key = createHash("sha256").update(packKeySource).digest("hex");
+
+    // Compute PDF sha256 for traceability (optional but useful for debugging / updates)
+    const pdf_sha256 = createHash("sha256").update(pdfBuffer).digest("hex");
+
     // Generate filename with mode indicator
     const timestamp = now.toISOString().split('T')[0];
     const sanitizedAddress = property.address_text.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
@@ -486,31 +496,39 @@ export async function POST(request: NextRequest) {
       throw new Error("Failed to generate download URL");
     }
 
-    // Save pack run record for each issue
-    const packRunRecords = issueIds.map((issueId) => ({
-      user_id: user.id,
-      issue_id: issueId,
-      pdf_path: filePath,
-      from_date: defaultFromDate,
-      to_date: defaultToDate,
-    }));
-
-    const { error: insertError } = await supabase
+    // Save pack run record (ONE row per pack) - idempotent via pack_key upsert
+    // On repeated generation with same inputs, this updates the existing record instead of creating duplicates.
+    const { error: upsertError } = await supabase
       .from("evidence_pack_runs")
-      .insert(packRunRecords);
+      .upsert(
+        {
+          user_id: user.id,
+          property_id: property.id,
+          pack_key,
+          mode: (mode as EvidencePackMode) || "concise",
+          issue_ids: sortedIssueIds,
+          from_date: defaultFromDate,
+          to_date: defaultToDate,
+          pdf_path: filePath,
+          generated_at: now.toISOString(),
+          // Optional metadata (columns may exist in future; safe to ignore if not selected)
+          // pdf_sha256,
+        } as any,
+        { onConflict: "user_id,property_id,pack_key" }
+      );
 
-    if (insertError) {
-      console.error("Error inserting pack run records:", {
-        error: insertError,
-        code: insertError.code,
-        message: insertError.message,
-        details: insertError.details,
-        hint: insertError.hint,
-        records: packRunRecords,
+    if (upsertError) {
+      console.error("Error upserting pack run record:", {
+        error: upsertError,
+        code: (upsertError as any).code,
+        message: (upsertError as any).message,
+        details: (upsertError as any).details,
+        hint: (upsertError as any).hint,
+        pack_key,
+        property_id: property.id,
+        issue_ids: sortedIssueIds,
       });
-      // Log the error but don't fail the request - PDF was already generated and uploaded
-      // The pack can still be downloaded, we just won't have a record of it
-      // In production, you might want to log this to a monitoring service
+      // Log only; PDF is already generated + uploaded.
     }
 
     // Return download URL with metadata
@@ -535,6 +553,8 @@ export async function POST(request: NextRequest) {
       },
       mode: mode,
       version: "2.0",
+      pack_key,
+      pdf_sha256,
     });
   } catch (error) {
     return handleApiError(error);

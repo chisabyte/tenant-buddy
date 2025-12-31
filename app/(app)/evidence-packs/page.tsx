@@ -34,7 +34,7 @@ export default async function EvidencePacksPage() {
 
   const property = properties?.[0];
 
-  // Get existing packs with issue info
+  // Get existing packs (ONE row per pack, idempotent)
   const { data: packs, error } = await supabase
     .from("evidence_pack_runs")
     .select(
@@ -42,20 +42,39 @@ export default async function EvidencePacksPage() {
       id,
       from_date,
       to_date,
-      created_at,
-      issues!inner(
-        id,
-        title,
-        severity
-      )
+      generated_at,
+      mode,
+      issue_ids,
+      pdf_path
     `
     )
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("generated_at", { ascending: false });
 
   if (error) {
     console.error("Error fetching evidence packs:", error);
   }
+
+  // Fetch issue details for all packs (to show a human-friendly preview)
+  const allIssueIds = Array.from(
+    new Set(
+      (packs || [])
+        .flatMap((p: any) => (Array.isArray(p.issue_ids) ? p.issue_ids : []))
+        .filter(Boolean)
+    )
+  );
+
+  const { data: issuesForPreview } =
+    allIssueIds.length > 0
+      ? await supabase
+          .from("issues")
+          .select("id, title, severity")
+          .in("id", allIssueIds)
+          .eq("user_id", user.id)
+      : { data: [] as any[] };
+
+  const issueById = new Map<string, any>();
+  (issuesForPreview || []).forEach((i: any) => issueById.set(i.id, i));
 
   // Get open issues count for context
   const { count: openIssuesCount } = await supabase
@@ -232,10 +251,18 @@ export default async function EvidencePacksPage() {
           {/* Pack Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {packs.map((pack: any) => {
-              const issue = pack.issues;
-              const isHighSeverity =
-                issue?.severity === "Urgent" || issue?.severity === "High";
-              const createdDate = new Date(pack.created_at);
+              const packIssueIds: string[] = Array.isArray(pack.issue_ids) ? pack.issue_ids : [];
+              const previewIssues = packIssueIds
+                .map((id) => issueById.get(id))
+                .filter(Boolean);
+
+              const hasHighSeverity = previewIssues.some(
+                (i: any) => i?.severity === "Urgent" || i?.severity === "High"
+              );
+
+              const generatedDate = new Date(pack.generated_at || pack.created_at);
+              const issuesCount = packIssueIds.length;
+              const modeLabel = pack.mode === "detailed" ? "Detailed" : "Concise";
 
               return (
                 <div
@@ -247,9 +274,9 @@ export default async function EvidencePacksPage() {
                       <FileText className="h-5 w-5" />
                     </div>
                     <div className="flex items-center gap-2">
-                      {isHighSeverity && (
+                      {hasHighSeverity && (
                         <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded">
-                          {issue.severity}
+                          High priority
                         </span>
                       )}
                       <span className="text-xs font-medium text-text-subtle bg-card-lighter px-2 py-1 rounded flex items-center gap-1">
@@ -260,8 +287,25 @@ export default async function EvidencePacksPage() {
                   </div>
 
                   <h3 className="text-white font-semibold text-base mb-1 line-clamp-2">
-                    {issue?.title || "Untitled Issue"}
+                    Evidence Pack ({issuesCount} issue{issuesCount !== 1 ? "s" : ""})
                   </h3>
+
+                  <p className="text-text-subtle text-xs">
+                    Mode: <span className="text-white/80 font-medium">{modeLabel}</span>
+                  </p>
+
+                  {previewIssues.length > 0 && (
+                    <div className="mt-3 text-xs text-text-subtle space-y-1">
+                      {previewIssues.slice(0, 2).map((i: any) => (
+                        <div key={i.id} className="line-clamp-1">
+                          • {i.title}
+                        </div>
+                      ))}
+                      {previewIssues.length > 2 && (
+                        <div className="text-white/70">+ {previewIssues.length - 2} more</div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 text-text-subtle text-xs mt-2">
                     <Calendar className="h-3.5 w-3.5" />
@@ -273,7 +317,7 @@ export default async function EvidencePacksPage() {
 
                   <div className="mt-auto pt-4 flex items-center justify-between border-t border-card-lighter mt-4">
                     <span className="text-xs text-text-subtle">
-                      {format(createdDate, "MMM d, yyyy 'at' h:mm a")}
+                      Last generated {format(generatedDate, "MMM d, yyyy 'at' h:mm a")}
                     </span>
                     <ChevronRight className="h-4 w-4 text-text-subtle group-hover:text-primary transition-colors" />
                   </div>
